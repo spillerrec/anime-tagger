@@ -149,8 +149,8 @@ var getJSON = function(url, callback) {
 				
 				rect.w = Math.abs(rect.startX - x);
 				rect.h = Math.abs(rect.startY - y);
-				rect.x = Math.min(rect.x, x);
-				rect.y = Math.min(rect.y, y);
+				rect.x = Math.min(rect.startX, x);
+				rect.y = Math.min(rect.startY, y);
 				rects.forEach(updateRectPositon);
 			}
 			
