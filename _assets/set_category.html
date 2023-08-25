@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<style>
+			html {
+				background-color: black;
+			}
+			#image {
+				position:relative;
+				cursor: crosshair;
+				max-width: 100%;
+				max-height: 1000px;
+				object-fit: scale-down;
+			}
+			#container{
+				position: relative;
+			}
+			.rectangle {
+				position: absolute;
+				border: 1px solid black;
+				pointer-events: none;
+			}
+			p {
+			   color:white;
+			}
+		</style>
+	</head>
+	<body>
+		<button id="doyes" style="display:block">Yes</button>
+		<button id="dono" style="display:block">No</button>
+		<div id="container">
+		<img id="image">
+		</div>
+		<script>
+		
+			var getJSON = function(url, callback) {
+				 var xhr = new XMLHttpRequest();
+				 xhr.open('GET', url, true);
+				 xhr.responseType = 'json';
+				 xhr.onload = function() {
+					var status = xhr.status;
+					if (status === 200) {
+					  callback(null, xhr.response);
+					} else {
+					  callback(status, xhr.response);
+					}
+				 };
+				 xhr.send();
+			};
+			
+			
+			index = 0
+			ids = [];
+			
+			function updateImage(){
+				image = document.getElementById("image");
+				image.src = '/crop/' + ids[index];
+			}
+			
+			tags = window.location.href.split("/").splice(4)
+			doingTag = tags[0]
+			searchTag = tags.join("/")
+			getJSON('/missingTagIds/' + searchTag,
+			function(err, data) {
+			  if (err !== null) {
+				 alert('Something went wrong: ' + err);
+			  } else {
+				 ids = data;
+				 updateImage();
+			  }
+			});
+		
+			document.addEventListener("keydown", function(event) {
+				tag_is = false
+				ok = false
+				if (event.keyCode === 13) {
+					//Enter
+					tag_is = true
+					ok = true
+				}
+				else if (event.keyCode === 32){
+					//Space
+					ok = true
+					tag_is = false
+				}
+				else if (event.keyCode === 8)
+				{
+					//Backspace, go back and redo
+					index--;
+					updateImage();
+					ok = false;
+				}
+				
+				if (ok)
+				{
+					fetch("/set-category", {
+						method: "POST",
+						headers: {
+							"Content-Type": "application/json"
+						},
+						body: JSON.stringify({
+							'tag': doingTag,
+							'id': ids[index],
+							'value': tag_is
+						})
+					})
+						.then(response => response.json())
+						.then(data => console.log(data))
+						.catch(error => console.error(error));
+					
+					index++;
+					updateImage();
+				}
+			});
+		</script>
+	</body>
+</html>

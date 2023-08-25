@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<style>
+			html {
+				background-color: black;
+			}
+			#image {
+				position:relative;
+				cursor: crosshair;
+				max-width: 100%;
+				max-height: 1000px;
+				object-fit: scale-down;
+			}
+			#container{
+				position: relative;
+			}
+			.rectangle {
+				position: absolute;
+				border: 1px solid black;
+				pointer-events: none;
+			}
+			p {
+			   color:white;
+			}
+		</style>
+	</head>
+	<body>
+		<button id="addrect" style="display:block">Add rect</button>
+		<button id="addfull" style="display:block">Use entire image</button>
+		<div id="container">
+		<img id="image" onmousedown="startDrag(event)" onmousemove="drag(event)" onmouseup="endDrag()">
+		</div>
+		<script>
+		
+var getJSON = function(url, callback) {
+    var xhr = new XMLHttpRequest();
+    xhr.open('GET', url, true);
+    xhr.responseType = 'json';
+    xhr.onload = function() {
+      var status = xhr.status;
+      if (status === 200) {
+        callback(null, xhr.response);
+      } else {
+        callback(status, xhr.response);
+      }
+    };
+    xhr.send();
+};
+			index = 0
+			ids = [];
+			rects = []
+			
+			
+			function addNewRect(){
+				var newDiv = document.createElement('div');
+				newDiv.classList.add('rectangle');
+				
+				rects.push({
+					'x': 0,
+					'y': 0,
+					'w': 0,
+					'h': 0,
+					'startX': 0,
+					'startY': 0,
+					'dragging': false,
+					'done': false,
+					'element': newDiv
+				});
+				
+				document.getElementById('container').appendChild(newDiv);
+			}
+			
+			
+			document.getElementById('addrect').addEventListener('click', addNewRect);
+			
+			function current(){
+				return rects[rects.length - 1];
+			}
+			
+			function initRects(){
+				rects.forEach(function(e){ e.element.remove(); });
+				rects = [];
+				addNewRect();
+			}
+			
+			function updateImage(){
+				image = document.getElementById("image");
+				image.src = '/images/' + ids[index];
+				initRects();
+			}
+			
+			getJSON('/ids',
+			function(err, data) {
+			  if (err !== null) {
+				 alert('Something went wrong: ' + err);
+			  } else {
+				 ids = data;
+				 updateImage();
+			  }
+			});
+		
+			var startX, startY, endX, endY, dragging = false;
+			
+			function translatePosition(x, y){
+				var img = document.getElementById("image");
+				scaleX = image.clientWidth / image.naturalWidth;
+				scaleY = image.clientHeight / image.naturalHeight;
+				x -= image.x;
+				y -= image.y;
+				return { 'x': x / scaleX, 'y': y / scaleY };
+			}
+			function translateReversePosition(x, y){
+				var img = document.getElementById("image");
+				scaleX = image.clientWidth / image.naturalWidth;
+				scaleY = image.clientHeight / image.naturalHeight;
+				
+				return {'x': x * scaleX, 'y': y * scaleY};
+			}
+			function updateRectPositon(rect){
+				rect.element.style.left   = translateReversePosition(rect.x, rect.y).x + "px";
+				rect.element.style.top    = translateReversePosition(rect.x, rect.y).y + "px";
+				rect.element.style.width  = translateReversePosition(rect.w, rect.h).x + "px";
+				rect.element.style.height = translateReversePosition(rect.w, rect.h).y + "px";
+				console.log(rect);
+			}
+			
+			function startDrag(event) {
+				if (rects.length == 0 || current().done)
+					addNewRect();
+				event.preventDefault();
+				let {x, y} = translatePosition(event.clientX, event.clientY);
+				var rect = current();
+				rect.startX = rect.x = x;
+				rect.startY = rect.y = y;
+				rect.dragging = true;
+			}
+			
+			function drag(event) {
+				let {x, y} = translatePosition(event.clientX, event.clientY);
+				var rect = current();
+				
+				if (!rect.dragging) return;
+				
+				rect.w = Math.abs(rect.startX - x);
+				rect.h = Math.abs(rect.startY - y);
+				rect.x = Math.min(rect.x, x);
+				rect.y = Math.min(rect.y, y);
+				rects.forEach(updateRectPositon);
+			}
+			
+			function endDrag() {
+				var rect = current();
+				rect.dragging = false;
+			}
+			
+			function finalizeRects() {
+				parsedRects = [];
+				
+				rects.forEach(function(rect){
+					parsedRects.push({
+						'x': rect.x,
+						'y': rect.y,
+						'width': rect.w,
+						'height': rect.h
+					});
+				});
+				
+				console.log(parsedRects);
+
+				fetch("/add-tag", {
+					method: "POST",
+					headers: {
+						"Content-Type": "application/json"
+					},
+					body: JSON.stringify({
+						'id': ids[index],
+						'rects': parsedRects
+					})
+				})
+					.then(response => response.json())
+					.then(data => console.log(data))
+					.catch(error => console.error(error));
+					
+				initRects();
+				index++;
+				updateImage();
+			}
+			
+			document.addEventListener("keydown", function(event) {
+				if (event.keyCode === 13) {
+					finalizeRects();
+				}
+			});
+			
+			function useEntireImage(){
+				var newDiv = document.createElement('div');
+				newDiv.classList.add('rectangle');
+				
+				rects.push({
+					'x': 0,
+					'y': 0,
+					'w': image.naturalWidth,
+					'h': image.naturalHeight,
+					'startX': 0,
+					'startY': 0,
+					'dragging': false,
+					'done': false,
+					'element': newDiv
+				});
+				
+				document.getElementById('container').appendChild(newDiv);
+				finalizeRects();
+			}
+			document.getElementById('addfull').addEventListener('click', useEntireImage);
+		</script>
+	</body>
+</html>

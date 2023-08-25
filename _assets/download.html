@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<style>
+			html {
+				background-color: black;
+				color:white;
+			}
+			#image {
+				position:relative;
+				cursor: crosshair;
+				max-width: 100%;
+				max-height: 1000px;
+				object-fit: scale-down;
+			}
+			#container{
+				position: relative;
+			}
+			.rectangle {
+				position: absolute;
+				border: 1px solid black;
+				pointer-events: none;
+			}
+			p {
+			   color:white;
+			}
+			img {
+				border: black solid 4px;
+				margin: 4px;
+			}
+			.marked{
+				border: red solid 4px;
+			}
+		</style>
+	</head>
+	<body>
+		<h1>Show all images with the following tags:</h1>
+		<input type="text" id="searchbox">
+		<input type="text" id="searchpage">
+		<button onclick="update()">Search</button>
+		<button onclick="download()">Mark for download</button>
+		<div id="results">
+		
+		</div>
+		<script>
+		
+var getJSON = function(url, callback) {
+    var xhr = new XMLHttpRequest();
+    xhr.open('GET', url, true);
+    xhr.responseType = 'json';
+    xhr.onload = function() {
+      var status = xhr.status;
+      if (status === 200) {
+        callback(null, xhr.response);
+      } else {
+        callback(status, xhr.response);
+      }
+    };
+    xhr.send();
+};
+
+			ids = [];
+			
+			function toggle(item){
+				if (item.classList.contains('marked'))
+					item.classList.remove('marked')
+				else
+					item.classList.add('marked')
+			}
+			
+			var updatePage = function(){
+			var resultsDiv = document.getElementById("results");
+			while (resultsDiv.firstChild) {
+				resultsDiv.removeChild(resultsDiv.firstChild);
+			}
+				ids.forEach(function(id){
+					var img = document.createElement("img");
+					img.src = id['preview_file_url'];
+					img.title = id['tag_string'];
+					img.id = id['id']
+					
+					if (id['isDownloaded'])
+						toggle(img);
+					
+					img.addEventListener('click', function(e){ console.log("test"); toggle(img); });
+					
+					resultsDiv.appendChild(img);
+				});
+			};
+			
+			function download(){
+				allMarked = []
+				var inputValue = document.getElementById("searchbox").value;
+				var resultsDiv = document.getElementById("results");
+				var children = resultsDiv.children;
+				for (var i = 0; i < children.length; i++) {
+					var img = children[i];
+					if (img.classList.contains('marked'))
+						allMarked.push(img.id)
+				}
+				console.log(allMarked);
+				
+				fetch("/add-download", {
+					method: "POST",
+					headers: {
+						"Content-Type": "application/json"
+					},
+					body: JSON.stringify({
+						'id': inputValue,
+						'items': allMarked
+					})
+				})
+					.then(response => response.json())
+					.then(data => console.log(data))
+					.catch(error => console.error(error));
+			};
+			
+			
+			
+			function update() {
+				var inputValue = document.getElementById("searchbox").value;
+				var inputPage = document.getElementById("searchpage").value;
+				getJSON('/search_dan/' + inputValue + '/' + inputPage,
+				function(err, data) {
+				  if (err !== null) {
+					 alert('Something went wrong: ' + err);
+				  } else {
+					 ids = data;
+					 updatePage();
+				  }
+				});
+			}
+		</script>
+	</body>
+</html>

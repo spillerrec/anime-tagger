@@ -1,0 +1,236 @@
+import os
+import os.path
+import json
+from PIL import Image
+import tagger
+
+def readJson(json_path):
+	with open(json_path, encoding="utf-8") as json_file:
+		return json.load(json_file)
+
+def readJsonIf(path, default_value={}):
+	if os.path.exists(path):
+		return readJson(path)
+	return default_value
+	
+def getAreas(path = 'area_tags.json'):
+	extra_tags = {}
+	if os.path.exists(path):
+		return readJson(path)
+	return {}
+	
+def saveAreas(hypertags, path = 'area_tags.json'):
+	with open(path, "w") as f:
+		json.dump(hypertags, f, indent=2)
+	
+taggerCache = None
+taggerCacheDirty = False
+def getTaggerCache(path = 'auto_tag_cache.json'):
+	global taggerCache
+	if taggerCache:
+		return taggerCache
+	if os.path.exists(path):
+		taggerCache = readJson(path)
+		return taggerCache
+	return {}
+	
+def saveTaggerCache(hypertags, path = 'auto_tag_cache.json'):
+	global taggerCache
+	global taggerCacheDirty
+	taggerCacheDirty = True
+	taggerCache = hypertags
+		
+def writeTaggerCache(path = 'auto_tag_cache.json'):
+	global taggerCache
+	global taggerCacheDirty
+	if taggerCacheDirty:
+		taggerCacheDirty = False
+		with open(path, "w") as f:
+			json.dump(taggerCache, f, indent=2)
+	
+def getCharacterTags(path = 'character_tags.json'):
+	if os.path.exists(path):
+		return readJson(path)
+	return {}
+	
+def saveCharacterTags(hypertags, path = 'character_tags.json'):
+	with open(path, "w") as f:
+		json.dump(hypertags, f, indent=2)
+
+
+def getFiles(group):
+	imagePath = group
+	imagePathFull = 'images/' + imagePath
+	files = [os.path.join(imagePath, f) for f in os.listdir(imagePathFull) if os.path.isfile(os.path.join(imagePathFull, f))]
+	return files
+	
+def getIds(group):
+	return [id for id, item in enumerate(getFiles(group))]
+	
+def getImagePath(group, id):
+	if '-' in id:
+		id = id.split('-')[0]
+	return 'images/' + getFiles(group)[int(id)]
+	
+def setCrop(group, id, rects):
+	areas = getAreas()
+	areas[group][id] = rects
+	saveAreas(areas)
+	
+def getCrops(group, id):
+	areas = getAreas()
+	return list(filter(cropIsValid, areas[group][id]))
+	
+def getCrop(group, id):
+	areas = getAreas()
+	
+	items = id.split('-')
+	key = items[0]
+	index = int(items[1])
+	return getCrops(group, key)[index]
+	
+def hasCrop(group, id):
+	if getCrop(group, id):
+		return True
+	return False
+	
+def cropIsValid(rect):
+	w = int(rect['width'])
+	h = int(rect['height'])
+	return w > 0 and h > 0
+	
+def getCropIds(group):
+	areas = getAreas()
+	if not group in areas:
+		return []
+	
+	ids = []
+	for key, rects in areas[group].items():
+		for index, rect in enumerate(filter(cropIsValid, rects)):
+			ids.append(key + '-' + str(index))
+	return ids
+
+def getCroppedImage(group, id):
+	crop = getCrop(group, id)
+	
+	if crop:
+		path = getImagePath(group, id)
+		rect = crop
+		img = Image.open(path)
+		width, height = img.size
+		if len(img.size) == 2:
+			img = img.convert('RGB')
+		
+		x = max(0, int(rect['x']))
+		y = max(0, int(rect['y']))
+		w = int(rect['width'])
+		h = int(rect['height'])
+		w = min(width, x+w) - x
+		h = min(height, y+h) - y
+		
+		if w > 0 and h > 0:
+			return img.crop((x, y, x + w, y + h))
+	return None
+		
+def getAutoTags(group, id):
+	cache = getTaggerCache()
+	
+	if group in cache:
+		if id in cache[group]:
+			return cache[group][id]
+	else:
+		cache[group] = {}
+	
+	cropped = getCroppedImage(group, id)
+	tagResult = tagger.evaluate(cropped)
+	
+	cache[group][id] = tagResult.tolist()
+	saveTaggerCache(cache)
+	
+	return tagResult
+	
+def hasManualTag(group, id, tag):
+	charaTags = getCharacterTags()
+	
+	if not group in charaTags:
+		return False
+	
+	if not id in charaTags[group]:
+		return False
+	
+	if not tag in charaTags[group][id]:
+		return False
+		
+	return True
+	
+def getManualTags(group, id):
+	charaTags = getCharacterTags()
+	if not group in charaTags:
+		return []
+	if not id in charaTags[group]:
+		return []
+	
+	tags = []
+	for tag, is_set in charaTags[group][id].items():
+		if is_set:
+			tags.append(tag)
+	return tags
+	
+def getManualTag(group, id, tag):
+	if not hasManualTag(group, id, tag):
+		return False
+	
+	charaTags = getCharacterTags()
+	return charaTags[group][id][tag]
+	
+def setManualTag(group, id, tag, value):
+	charaTags = getCharacterTags()
+	
+	if not group in charaTags:
+		charaTags[group] = {}
+	if not id in charaTags[group]:
+		charaTags[group][id] = {}
+	
+	charaTags[group][id][tag] = value
+	saveCharacterTags(charaTags)
+	
+def getMissingManualTags(group, tag):
+	allIds = getCropIds(group)
+	
+	return list(filter(lambda x: not hasManualTag(group, x, tag), allIds))
+	
+def getTagStrength(group, id, tag):
+	auto_tags = getAutoTags(group, id)
+	return tagger.tagStrength(auto_tags, tag)
+	
+def getMissingManualTagsSorted(group, tag, sort_tag):
+	ids = getMissingManualTags(group, tag)
+	
+	return sorted(ids, key=lambda x: getTagStrength(group, x, sort_tag), reverse=True)
+	
+
+def getIgnoreTags(path = 'ignore_tags.json'):
+	if os.path.exists(path):
+		return readJson(path)
+	return {}
+	
+def saveIgnoreTags(hypertags, path = 'ignore_tags.json'):
+	with open(path, "w") as f:
+		json.dump(hypertags, f, indent=2)
+		
+def setIgnoreTags(group, on_tag, ignore_tags):
+	ignoreJson = getIgnoreTags()
+	if not group in ignoreJson:
+		ignoreJson[group] = {}
+	
+	ignoreJson[group][on_tag] = ignore_tags
+	saveIgnoreTags(ignoreJson)
+	
+def getIgnoreTagsForTag(group, on_tag):
+	ignoreJson = getIgnoreTags()
+	if not group in ignoreJson:
+		return []
+	if not on_tag in ignoreJson[group]:
+		return []
+	return ignoreJson[group][on_tag]
+	

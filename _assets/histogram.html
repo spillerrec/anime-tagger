@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<style>
+			html {
+				background-color: black;
+				color:white;
+				font-family: sans-serif;
+				margin:0;
+				padding:0;
+				margin-block:0;
+			}
+			#image {
+				position:relative;
+				cursor: crosshair;
+				max-width: 100%;
+				max-height: 1000px;
+				object-fit: scale-down;
+			}
+			#container{
+				position: relative;
+			}
+			.rectangle {
+				text:right;
+				position: absolute;
+				border: 1px solid black;
+				pointer-events: none;
+			}
+			p {
+			   color:white;
+				margin:0;
+			}
+			.tag_list{			
+				 display: grid;
+				 grid-template-columns: 30px auto;
+				 max-height: 300px;
+				 overflow: overlay;
+			}
+			.tag_list p{
+			    text-align: right;
+			}
+			
+			#results{
+				display: grid;
+				grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+			}
+			#results > div {
+				border-radius: 10px;
+				background-color: #181818;
+				padding: 10px;
+				margin: 5px;
+			}
+			#results h2{ margin: 0px 0px 5px 0px; }
+			.tag_list .name:has(input:checked){
+				background-color: green;
+			}
+			#results *{ text-transform: capitalize; }
+		</style>
+	</head>
+	<body>
+		<h1>Show frequency of the tags matching the query:</h1>
+		<input type="text" id="searchbox" oninput="update()">
+		<button id="updatehyper" style="display:block">Set hypertag</button>
+		<div id="results">
+		
+		</div>
+		<script>
+		
+var getJSON = function(url, callback) {
+    var xhr = new XMLHttpRequest();
+    xhr.open('GET', url, true);
+    xhr.responseType = 'json';
+    xhr.onload = function() {
+      var status = xhr.status;
+      if (status === 200) {
+        callback(null, xhr.response);
+      } else {
+        callback(status, xhr.response);
+      }
+    };
+    xhr.send();
+};
+
+			ids = [];
+			
+			var updatePage = function(){
+				var resultsDiv = document.getElementById("results");
+				while (resultsDiv.firstChild) {
+					resultsDiv.removeChild(resultsDiv.firstChild);
+				}
+				for (let category in ids) {
+					var container = document.createElement("div");
+					container.id = category;
+					resultsDiv.append(container);
+					
+					var catName = document.createElement("h2");
+					catName.innerHTML = category;
+					container.append(catName);
+					
+					var tagList = document.createElement("div");
+					tagList.classList.add("tag_list");
+					container.append(tagList);
+					
+					ids[category].forEach(function(id){
+						var count = document.createElement("p");
+						count.classList.add("count");
+						count.innerHTML = id.count;
+						tagList.appendChild(count);
+						
+						
+						var div2 = document.createElement("div");
+						div2.classList.add("name");
+						tagList.appendChild(div2);
+						
+						var name = document.createElement("input");
+						name.type = "checkbox"
+						name.id = id.tag;
+						
+						name.checked = id.checked;
+						div2.appendChild(name);
+						
+						var nameLabel = document.createElement("label");
+						nameLabel.for = id.tag;
+						nameLabel.innerHTML = id.tag.replace('_', ' ');
+						div2.appendChild(nameLabel);
+						
+						div2.addEventListener('click', function(event){
+							event.preventDefault();
+							name.checked ^= 1;
+						} );
+						name.addEventListener('click', function(event){
+							event.stopPropagation();
+						} );
+					});
+				
+				}
+			};
+			
+			function update() {
+				var inputValue = document.getElementById("searchbox").value;
+				getJSON('/get-tag-histo/' + inputValue,
+				function(err, data) {
+				  if (err !== null) {
+					 alert('Something went wrong: ' + err);
+				  } else {
+					 ids = data;
+					 updatePage();
+				  }
+				});
+			}
+			
+			function updateHyperTags(){
+				var resultsDiv = document.getElementById("results");
+				var entries = resultsDiv.getElementsByTagName("input");
+				items = [];
+				for( input of entries ){
+					if (input.checked)
+						items.push(input.id);
+				}
+				
+				var updateEntry = {
+					'tag' : document.getElementById("searchbox").value,
+					'remove' : items
+				};
+				console.log(updateEntry);
+				
+				fetch("/set-ignore-tags", {
+					method: "POST",
+					headers: {
+						"Content-Type": "application/json"
+					},
+					body: JSON.stringify(updateEntry)
+				})
+					.then(response => response.json())
+					.then(data => console.log(data))
+					.catch(error => console.error(error));
+			}
+			
+			document.getElementById('updatehyper').addEventListener('click', updateHyperTags);
+		</script>
+	</body>
+</html>
