@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html>
+<html onmousemove="drag(event)" onmouseup="endDrag()">
 	<head>
 		<style>
 			html {
@@ -29,7 +29,7 @@
 		<button id="addrect" style="display:block">Add rect</button>
 		<button id="addfull" style="display:block">Use entire image</button>
 		<div id="container">
-		<img id="image" onmousedown="startDrag(event)" onmousemove="drag(event)" onmouseup="endDrag()">
+		<img id="image" onmousedown="startDrag(event)">
 		</div>
 		<script>
 		
@@ -50,6 +50,8 @@ var getJSON = function(url, callback) {
 			index = 0
 			ids = [];
 			rects = []
+			
+			const clamp = (num, min, max) => Math.min(Math.max(num, min), max);
 			
 			
 			function addNewRect(){
@@ -109,6 +111,8 @@ var getJSON = function(url, callback) {
 				var imgPos = image.getBoundingClientRect();
 				x -= imgPos.x;
 				y -= imgPos.y;
+				x = clamp(x, 0, imgPos.width );
+				y = clamp(y, 0, imgPos.height);
 				return { 'x': x / scaleX, 'y': y / scaleY };
 			}
 			function translateReversePosition(x, y){
