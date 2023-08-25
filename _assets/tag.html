@@ -103,15 +103,16 @@ var getJSON = function(url, callback) {
 			var startX, startY, endX, endY, dragging = false;
 			
 			function translatePosition(x, y){
-				var img = document.getElementById("image");
+				var image = document.getElementById("image");
 				scaleX = image.clientWidth / image.naturalWidth;
 				scaleY = image.clientHeight / image.naturalHeight;
-				x -= image.x;
-				y -= image.y;
+				var imgPos = image.getBoundingClientRect();
+				x -= imgPos.x;
+				y -= imgPos.y;
 				return { 'x': x / scaleX, 'y': y / scaleY };
 			}
 			function translateReversePosition(x, y){
-				var img = document.getElementById("image");
+				var image = document.getElementById("image");
 				scaleX = image.clientWidth / image.naturalWidth;
 				scaleY = image.clientHeight / image.naturalHeight;
 				
