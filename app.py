@@ -187,12 +187,12 @@ def serve_crop(id):
 	img = data.getCroppedImage(wanted_tag, id)
 	
 	b = io.BytesIO()
-	img.save(b, 'png')
+	img.save(b, 'jpeg')
 	b.seek(0)
 	print(len(img.tobytes()))
 	return send_file(
 		b,#b,
-		mimetype="image/png"
+		mimetype="image/jpeg"
 	)
 	
 @app.route('/images/<id>')
