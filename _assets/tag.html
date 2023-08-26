@@ -23,6 +23,13 @@
 					linear-gradient(90deg, rgba(255,0,0,0.1) 32.7%, rgba(0,0,0,0.5) 33%, rgba(255,0,0,0.1) 33.3%, rgba(255,0,0,0.1) 66.7%, rgba(0,0,0,0.5) 67%, rgba(255,0,0,0.1) 67.3%),
 					linear-gradient( 0deg, rgba(255,0,0,0.1) 32.7%, rgba(0,0,0,0.5) 33%, rgba(255,0,0,0.1) 33.3%, rgba(255,0,0,0.1) 66.7%, rgba(0,0,0,0.5) 67%, rgba(255,0,0,0.1) 67.3%);
 			}
+			
+			.rectangle-done {
+				position: absolute;
+				border: 1px solid black;
+				pointer-events: none;
+				background-color: #0095003b;
+			}
 			p {
 			   color:white;
 			}
@@ -55,20 +62,33 @@ var getJSON = function(url, callback) {
 			rects = []
 			
 			const clamp = (num, min, max) => Math.min(Math.max(num, min), max);
+			const insideRect = (rect, point) =>
+					point.x >= rect.x
+				&&	point.y >= rect.y
+				&& point.x < rect.x + rect.width
+				&& point.y < rect.y + rect.height
+				;
 			
 			
 			function addNewRect(){
+				if( rects.length != 0 )
+					current().element.classList.replace('rectangle', 'rectangle-done');
+				
 				var newDiv = document.createElement('div');
 				newDiv.classList.add('rectangle');
 				
 				rects.push({
-					'x': 0,
-					'y': 0,
-					'w': 0,
-					'h': 0,
+					'x': -1,
+					'y': -1,
+					'width': 0,
+					'height': 0,
 					'startX': 0,
 					'startY': 0,
-					'dragging': false,
+					'oldX': -1, //For moving/resizing
+					'oldY': -1,
+					'oldWidth': 0,
+					'oldHeight': 0,
+					'dragging': null,
 					'done': false,
 					'element': newDiv
 				});
@@ -104,8 +124,6 @@ var getJSON = function(url, callback) {
 				 updateImage();
 			  }
 			});
-		
-			var startX, startY, endX, endY, dragging = false;
 			
 			function translatePosition(x, y){
 				var image = document.getElementById("image");
@@ -126,39 +144,100 @@ var getJSON = function(url, callback) {
 				return {'x': x * scaleX, 'y': y * scaleY};
 			}
 			function updateRectPositon(rect){
-				rect.element.style.left   = translateReversePosition(rect.x, rect.y).x + "px";
-				rect.element.style.top    = translateReversePosition(rect.x, rect.y).y + "px";
-				rect.element.style.width  = translateReversePosition(rect.w, rect.h).x + "px";
-				rect.element.style.height = translateReversePosition(rect.w, rect.h).y + "px";
+				rect.element.style.left   = translateReversePosition(rect.x    , rect.y     ).x + "px";
+				rect.element.style.top    = translateReversePosition(rect.x    , rect.y     ).y + "px";
+				rect.element.style.width  = translateReversePosition(rect.width, rect.height).x + "px";
+				rect.element.style.height = translateReversePosition(rect.width, rect.height).y + "px";
 			}
 			
 			function startDrag(event) {
-				if (rects.length == 0 || current().done)
-					addNewRect();
 				event.preventDefault();
 				let {x, y} = translatePosition(event.clientX, event.clientY);
+				
+				if (rects.length == 0 || current().done)
+					addNewRect();
 				var rect = current();
-				rect.startX = rect.x = x;
-				rect.startY = rect.y = y;
-				rect.dragging = true;
+				rect.startX = x;
+				rect.startY = y;
+				rect.oldX = rect.x;
+				rect.oldY = rect.y;
+				rect.oldWidth  = rect.width;
+				rect.oldHeight = rect.height;
+				
+				if( insideRect(rect, {"x":x, "y":y}) )
+				{
+					var rX = (x - rect.x) / rect.width;
+					var rY = (y - rect.y) / rect.height;
+					var left   = rX < 0.33;
+					var top    = rY < 0.33;
+					var right  = rX > 0.67;
+					var bottom = rY > 0.67;
+					var center = !left && !right && !top && !bottom;
+					if( center )
+						rect.dragging = 'move';
+					else
+						rect.dragging =
+								(left   ? 'left'   : '')
+							+	(top    ? 'top'    : '')
+							+	(right  ? 'right'  : '')
+							+	(bottom ? 'bottom' : '')
+							;
+				}
+				else
+				{
+					rect.dragging = 'new';
+				}
 			}
 			
 			function drag(event) {
 				let {x, y} = translatePosition(event.clientX, event.clientY);
 				var rect = current();
 				
-				if (!rect.dragging) return;
+				if( !rect.dragging )
+					return;
 				
-				rect.w = Math.abs(rect.startX - x);
-				rect.h = Math.abs(rect.startY - y);
-				rect.x = Math.min(rect.startX, x);
-				rect.y = Math.min(rect.startY, y);
+				if( rect.dragging == 'new' ){
+					rect.width  = Math.abs(rect.startX - x);
+					rect.height = Math.abs(rect.startY - y);
+					rect.x      = Math.min(rect.startX, x);
+					rect.y      = Math.min(rect.startY, y);
+				}
+				else if( rect.dragging == 'move' ){
+					rect.x = rect.oldX + (x - rect.startX);
+					rect.y = rect.oldY + (y - rect.startY);
+				}
+				else{
+					var diffX = x - rect.startX;
+					var diffY = y - rect.startY;
+					if( rect.dragging.includes('left') ){
+						rect.x = rect.oldX + diffX;
+						rect.width = rect.oldWidth - diffX;
+					}
+					if( rect.dragging.includes('top') ){
+						rect.y = rect.oldY + diffY;
+						rect.height = rect.oldHeight - diffY;
+					}
+					if( rect.dragging.includes('right') )
+						rect.width = rect.oldWidth + (x - rect.startX);
+					if( rect.dragging.includes('bottom') )
+						rect.height = rect.oldHeight + (y - rect.startY);
+					
+					var image = document.getElementById("image");
+					var overflowLeft = Math.max(0, rect.x) - rect.x;
+					var overflowTop  = Math.max(0, rect.y) - rect.y;
+					var overflowRight  = rect.x + rect.width  - Math.min(rect.x + rect.width , image.naturalWidth );
+					var overflowBottom = rect.y + rect.height - Math.min(rect.y + rect.height, image.naturalHeight);
+					rect.x = rect.x + overflowLeft;
+					rect.y += overflowTop;
+					rect.width -= overflowLeft + overflowRight;
+					rect.height -= overflowTop + overflowBottom;
+				}
 				rects.forEach(updateRectPositon);
 			}
 			
 			function endDrag() {
 				var rect = current();
-				rect.dragging = false;
+				rect.dragging = null;
 			}
 			
 			function finalizeRects() {
@@ -168,8 +247,8 @@ var getJSON = function(url, callback) {
 					parsedRects.push({
 						'x': rect.x,
 						'y': rect.y,
-						'width': rect.w,
-						'height': rect.h
+						'width': rect.width,
+						'height': rect.height
 					});
 				});
 				
@@ -201,22 +280,14 @@ var getJSON = function(url, callback) {
 			});
 			
 			function useEntireImage(){
-				var newDiv = document.createElement('div');
-				newDiv.classList.add('rectangle');
+				addNewRect();
 				
-				rects.push({
-					'x': 0,
-					'y': 0,
-					'w': image.naturalWidth,
-					'h': image.naturalHeight,
-					'startX': 0,
-					'startY': 0,
-					'dragging': false,
-					'done': false,
-					'element': newDiv
-				});
+				var rect = current();
+				rect.x = 0;
+				rect.y = 0;
+				rect.width  = image.naturalWidth;
+				rect.height = image.naturalHeight;
 				
-				document.getElementById('container').appendChild(newDiv);
 				finalizeRects();
 			}
 			document.getElementById('addfull').addEventListener('click', useEntireImage);
