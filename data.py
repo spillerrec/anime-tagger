@@ -194,10 +194,22 @@ def setManualTag(group, id, tag, value):
 	charaTags[group][id][tag] = value
 	saveCharacterTags(charaTags)
 	
-def getMissingManualTags(group, tag):
+def getMissingManualTags(group, tag, sort_tag=None, require=[], avoid=[]):
 	allIds = getCropIds(group)
 	
-	return list(filter(lambda x: not hasManualTag(group, x, tag), allIds))
+	ids = list(filter(lambda x: not hasManualTag(group, x, tag), allIds))
+	
+	for t in avoid:
+		ids = list(filter(lambda x: not getManualTag(group, x, t), ids))
+	
+	for t in require:
+		ids = list(filter(lambda x: getManualTag(group, x, t), ids))
+	
+	if sort_tag:
+		ids = sorted(ids, key=lambda x: getTagStrength(group, x, sort_tag), reverse=True)
+		
+	return ids
+	
 	
 def getAllManualTags(group):
 	allIds = getCropIds(group)
@@ -213,11 +225,6 @@ def getAllManualTags(group):
 def getTagStrength(group, id, tag):
 	auto_tags = getAutoTags(group, id)
 	return tagger.tagStrength(auto_tags, tag)
-	
-def getMissingManualTagsSorted(group, tag, sort_tag):
-	ids = getMissingManualTags(group, tag)
-	
-	return sorted(ids, key=lambda x: getTagStrength(group, x, sort_tag), reverse=True)
 	
 
 def getIgnoreTags(path = 'ignore_tags.json'):

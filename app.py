@@ -76,11 +76,8 @@ def serve_toggle():
 	return flask.send_from_directory(app.config['UPLOAD_FOLDER'], 'add_tags.html')
 	
 	
-@app.route('/set_tag/<tag>')
-def serve_set_tag(tag):
-	return flask.send_from_directory(app.config['UPLOAD_FOLDER'], 'set_category.html')
-@app.route('/set_tag/<tag>/<sort>')
-def serve_set_tag_sorted(tag, sort):
+@app.route('/set_tag')
+def serve_set_tag():
 	return flask.send_from_directory(app.config['UPLOAD_FOLDER'], 'set_category.html')
 
 @app.route('/ids')
@@ -89,15 +86,17 @@ def serve_ids():
 	
 	return jsonify(ids)
 
-@app.route('/missingTagIds/<tag>')
-def serve_missing_tag_ids(tag):
-	
-	return jsonify(data.getMissingManualTags(wanted_tag, tag))
-	
-@app.route('/missingTagIds/<tag>/<sort>')
-def serve_missing_tag_ids_sorted(tag, sort):
-	
-	return jsonify(data.getMissingManualTagsSorted(wanted_tag, tag, sort))
+@app.route('/missingTagIds', methods=['POST'])
+def serve_missing_tag_ids():
+	tag = request.json['new_tag']
+	sort = request.json['sort_by']
+	require = request.json['require']
+	exclude = request.json['exclude']
+	if require:
+		require = require.split(',')
+	if exclude:
+		exclude = exclude.split(',')
+	return jsonify(data.getMissingManualTags(wanted_tag, tag, sort, require, exclude))
 	
 @app.route('/get-tag-histo/<in_tag>')
 def serve_tag_histo(in_tag):	

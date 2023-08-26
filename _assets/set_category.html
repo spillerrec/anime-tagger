@@ -4,30 +4,52 @@
 		<style>
 			html {
 				background-color: black;
+			   color:white;
 			}
 			#image {
 				position:relative;
-				cursor: crosshair;
 				max-width: 100%;
-				max-height: 1000px;
+				max-height: 500px;
 				object-fit: scale-down;
 			}
 			#container{
 				position: relative;
 			}
-			.rectangle {
-				position: absolute;
-				border: 1px solid black;
-				pointer-events: none;
+			.box {
+				border-radius: 10px;
+				background-color: #181818;
+				padding: 10px;
+				margin: 5px;
 			}
-			p {
-			   color:white;
+			#search_config{
+				display: grid;
+				grid-template-columns: 120px auto;
 			}
+			#update {
+				grid-auto-flow: column;
+				display: grid;
+			}
+			p{margin:0;}
 		</style>
 	</head>
 	<body>
-		<button id="doyes" style="display:block">Yes</button>
-		<button id="dono" style="display:block">No</button>
+		<h1>Set new tag on images:</h1>
+		<div id="search_config" class="box">
+			<label for="new_tag">Tag to apply:</label>
+			<input type="text" id="new_tag" placeholder="Name of tag">
+			<label for="require_tags">Must include:</label>
+			<input type="text" id="require_tags" placeholder="Comma-separated">
+			<label for="avoid_tags">Must not have:</label>
+			<input type="text" id="avoid_tags" placeholder="Comma-separated">
+			<label for="sort_tag">Sort by:</label>
+			<input type="text" id="sort_tag" placeholder="auto-tag to sort by">
+			<button id="start_tagging" style="display:block" onclick="startTagging()">Start tagging</button>
+		</div>
+		<div id="update" class="box">
+			<p id="progress">? / ?</p>
+			<button id="doyes" style="display:block">Yes</button>
+			<button id="dono" style="display:block">No</button>
+		</div>
 		<div id="container">
 		<img id="image">
 		</div>
@@ -52,23 +74,33 @@
 			index = 0
 			ids = [];
 			
+			
 			function updateImage(){
 				image = document.getElementById("image");
 				image.src = '/crop/' + ids[index];
+				document.getElementById("progress").innerHTML = (index+1) + " / " + ids.length;
 			}
 			
-			tags = window.location.href.split("/").splice(4)
-			doingTag = tags[0]
-			searchTag = tags.join("/")
-			getJSON('/missingTagIds/' + searchTag,
-			function(err, data) {
-			  if (err !== null) {
-				 alert('Something went wrong: ' + err);
-			  } else {
-				 ids = data;
-				 updateImage();
-			  }
-			});
+			
+			async function startTagging(){
+				const response = await fetch("/missingTagIds", {
+					method: "POST",
+					headers: {
+						"Content-Type": "application/json"
+					},
+					body: JSON.stringify({
+						'new_tag': document.getElementById("new_tag").value,
+						'require': document.getElementById("require_tags").value,
+						'exclude': document.getElementById("avoid_tags").value,
+						'sort_by': document.getElementById("sort_tag").value
+					})
+				});
+				
+				ids = await response.json();
+				index = 0;
+				updateImage();
+			}
+			
 		
 			document.addEventListener("keydown", function(event) {
 				tag_is = false
@@ -99,7 +131,7 @@
 							"Content-Type": "application/json"
 						},
 						body: JSON.stringify({
-							'tag': doingTag,
+							'tag': document.getElementById("new_tag").value,
 							'id': ids[index],
 							'value': tag_is
 						})
