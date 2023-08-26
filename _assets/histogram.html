@@ -59,8 +59,12 @@
 	</head>
 	<body>
 		<h1>Show frequency of the tags matching the query:</h1>
-		<input type="text" id="searchbox" oninput="update()">
-		<button id="updatehyper" style="display:block">Set hypertag</button>
+		<div id="search_config">
+			<select name="tag" id="search_dropdown" oninput="update()">
+			
+			</select>
+			<button id="updatehyper" style="display:block">Set tags to ignore</button>
+		<div>
 		<div id="results">
 		
 		</div>
@@ -137,7 +141,7 @@ var getJSON = function(url, callback) {
 			};
 			
 			function update() {
-				var inputValue = document.getElementById("searchbox").value;
+				var inputValue = document.getElementById("search_dropdown").value;
 				getJSON('/get-tag-histo/' + inputValue,
 				function(err, data) {
 				  if (err !== null) {
@@ -149,6 +153,30 @@ var getJSON = function(url, callback) {
 				});
 			}
 			
+			function getCustomTags() {
+				var select = document.getElementById("search_dropdown");
+				getJSON('/custom_tags',
+				function(err, data) {
+					if (err !== null)
+						alert('Something went wrong: ' + err);
+					else
+					{
+						while( select.firstChild )
+							select.removeChild( select.firstChild );
+						console.log(data);
+						for( tag of data ){
+							var item = document.createElement("option");
+							item.value = tag;
+							item.innerHTML = tag.replace('_', ' ');
+							select.append( item );
+						}
+						update();
+					}
+				});
+			}
+			
+			getCustomTags();
+			
 			function updateHyperTags(){
 				var resultsDiv = document.getElementById("results");
 				var entries = resultsDiv.getElementsByTagName("input");
@@ -159,7 +187,7 @@ var getJSON = function(url, callback) {
 				}
 				
 				var updateEntry = {
-					'tag' : document.getElementById("searchbox").value,
+					'tag' : document.getElementById("search_dropdown").value,
 					'remove' : items
 				};
 				console.log(updateEntry);

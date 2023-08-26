@@ -199,6 +199,17 @@ def getMissingManualTags(group, tag):
 	
 	return list(filter(lambda x: not hasManualTag(group, x, tag), allIds))
 	
+def getAllManualTags(group):
+	allIds = getCropIds(group)
+	
+	tags = set()
+	for id in allIds:
+		for tag in getManualTags(group, id):
+			tags.add(tag)
+	
+	return list(tags)
+	
+	
 def getTagStrength(group, id, tag):
 	auto_tags = getAutoTags(group, id)
 	return tagger.tagStrength(auto_tags, tag)

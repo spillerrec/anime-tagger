@@ -245,6 +245,10 @@ def add_tag_area():
 	saveAreas(areas)
 	
 	return '[true]'
+	
+@app.route('/custom_tags')
+def get_custom_tags():
+	return jsonify(data.getAllManualTags(wanted_tag))
 
 if __name__ == '__main__':
 	app.run(host="localhost", port=8000)
