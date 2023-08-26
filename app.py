@@ -11,10 +11,6 @@ import requests
 import data
 import tagger
 
-type = 'main'
-if len(sys.argv) > 2:
-	type = sys.argv[2]
-
 
 def hasTag(id, wanted_tag):
 	(_, image_path, data) = common.getPostInfo(id)
@@ -42,7 +38,7 @@ def hasTag(id, wanted_tag):
 	#			return False
 	return True
 
-wanted_tag = 'Sento'
+wanted_tag = sys.argv[1]
 imagePath = wanted_tag
 imagePathFull = 'images/' + imagePath
 files = [os.path.join(imagePath, f) for f in os.listdir(imagePathFull) if os.path.isfile(os.path.join(imagePathFull, f))]

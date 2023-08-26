@@ -7,8 +7,9 @@ from tqdm import tqdm
 
 import data
 import tagger
+import sys
 
-sourceData = 'SummonedMage'
+sourceData = sys.argv[1]
 remove_tags = ['sensitive', 'explicit', 'anime_coloring', 'general', 'parody', 'cosplay', 'virtual_youtuber', 'questionable']
 add_tags = []#'anime_screencap']
 replace_existing = False
