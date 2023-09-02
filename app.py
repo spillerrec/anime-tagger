@@ -39,9 +39,7 @@ def hasTag(id, wanted_tag):
 	return True
 
 wanted_tag = sys.argv[1]
-imagePath = wanted_tag
-imagePathFull = 'images/' + imagePath
-files = [os.path.join(imagePath, f) for f in os.listdir(imagePathFull) if os.path.isfile(os.path.join(imagePathFull, f))]
+files = data.getFiles(wanted_tag)
 print(files)
 
 app = Flask(__name__)
@@ -82,9 +80,7 @@ def serve_set_tag():
 
 @app.route('/ids')
 def serve_ids():
-	ids = [index for index, path in enumerate(files)]
-	
-	return jsonify(ids)
+	return jsonify(data.getMissingIds(wanted_tag))
 
 @app.route('/missingTagIds', methods=['POST'])
 def serve_missing_tag_ids():

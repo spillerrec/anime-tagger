@@ -13,6 +13,33 @@ def readJsonIf(path, default_value={}):
 		return readJson(path)
 	return default_value
 	
+def iterateDir(folderPath):
+	files = []
+	dirs = []
+	for f in os.listdir(folderPath):
+		fullPath = os.path.join(folderPath, f)
+		if os.path.isfile(fullPath):
+			files.append(fullPath)
+		elif os.path.isdir(fullPath):
+			dirs.append(fullPath)
+		else:
+			print("Unknown file: " + fullPath)
+	return (files, dirs)
+	
+def getFiles(image_group):
+	imagePathFull = 'images/' + image_group
+	
+	files, dirs = iterateDir(imagePathFull)
+	for dir in dirs:
+		filesSub, _ = iterateDir(dir)
+		files = files + filesSub
+		
+	res = []
+	for file in files:
+		res.append(file[len('images/'):])
+	
+	return res
+	
 def getAreas(path = 'area_tags.json'):
 	extra_tags = {}
 	if os.path.exists(path):
@@ -57,15 +84,12 @@ def saveCharacterTags(hypertags, path = 'character_tags.json'):
 	with open(path, "w") as f:
 		json.dump(hypertags, f, indent=2)
 
-
-def getFiles(group):
-	imagePath = group
-	imagePathFull = 'images/' + imagePath
-	files = [os.path.join(imagePath, f) for f in os.listdir(imagePathFull) if os.path.isfile(os.path.join(imagePathFull, f))]
-	return files
 	
 def getIds(group):
 	return [id for id, item in enumerate(getFiles(group))]
+	
+def getMissingIds(group):
+	return list(filter(lambda x: len(getCrops(group, x)) == 0, getIds(group)))
 	
 def getImagePath(group, id):
 	if '-' in id:
@@ -78,7 +102,10 @@ def setCrop(group, id, rects):
 	saveAreas(areas)
 	
 def getCrops(group, id):
+	id = str(id)
 	areas = getAreas()
+	if not id in areas[group]:
+		return []
 	return list(filter(cropIsValid, areas[group][id]))
 	
 def getCrop(group, id):
