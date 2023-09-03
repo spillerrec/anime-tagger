@@ -13,6 +13,10 @@ export function getJSON(url, callback) {
 	xhr.send();
 };
 
+export async function getJson(url){
+	const response = await fetch(url);
+	return response.json()
+}
 
 export async function getJsonPost(url, request){
 	const response = await fetch(url, {
@@ -26,3 +30,11 @@ export async function getJsonPost(url, request){
 	return response.json()
 }
 
+export async function getCustomTags(){
+	return await getJson('/custom_tags');
+}
+
+
+export async function getHistogramForTag(tag){
+	return await getJson('/get-tag-histo/' + tag);
+}
