@@ -53,6 +53,14 @@ def allowed_file(filename):
 		   filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 			  
 
+@app.route('/assets/<item>')
+def serve_asset(item):
+	f = app.config['UPLOAD_FOLDER']
+	if os.path.exists(f + '/' + item + '.js'):
+		item = item + '.js'
+	
+	return flask.send_from_directory(f, item)
+	
 @app.route('/')
 def serve_main():
 	return flask.send_from_directory(app.config['UPLOAD_FOLDER'], 'index.html')

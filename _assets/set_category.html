@@ -1,36 +1,8 @@
 <!DOCTYPE html>
 <html>
 	<head>
-		<style>
-			html {
-				background-color: black;
-			   color:white;
-			}
-			#image {
-				position:relative;
-				max-width: 100%;
-				max-height: 500px;
-				object-fit: scale-down;
-			}
-			#container{
-				position: relative;
-			}
-			.box {
-				border-radius: 10px;
-				background-color: #181818;
-				padding: 10px;
-				margin: 5px;
-			}
-			#search_config{
-				display: grid;
-				grid-template-columns: 120px auto;
-			}
-			#update {
-				grid-auto-flow: column;
-				display: grid;
-			}
-			p{margin:0;}
-		</style>
+		<link rel="stylesheet" href="/assets/main.css">
+		<title>Set new tag on images</title>
 	</head>
 	<body>
 		<h1>Set new tag on images:</h1>
@@ -43,7 +15,7 @@
 			<input type="text" id="avoid_tags" placeholder="Comma-separated">
 			<label for="sort_tag">Sort by:</label>
 			<input type="text" id="sort_tag" placeholder="auto-tag to sort by">
-			<button id="start_tagging" style="display:block" onclick="startTagging()">Start tagging</button>
+			<button id="start_tagging" style="display:block">Start tagging</button>
 		</div>
 		<div id="update" class="box">
 			<p id="progress">? / ?</p>
@@ -53,58 +25,36 @@
 		<div id="container">
 		<img id="image">
 		</div>
-		<script>
-		
-			var getJSON = function(url, callback) {
-				 var xhr = new XMLHttpRequest();
-				 xhr.open('GET', url, true);
-				 xhr.responseType = 'json';
-				 xhr.onload = function() {
-					var status = xhr.status;
-					if (status === 200) {
-					  callback(null, xhr.response);
-					} else {
-					  callback(status, xhr.response);
-					}
-				 };
-				 xhr.send();
-			};
+		<script type="module">
+			import { getJsonPost } from '/assets/api'
 			
-			
-			index = 0
-			ids = [];
+			let index = 0
+			let ids = [];
 			
 			
 			function updateImage(){
-				image = document.getElementById("image");
+				let image = document.getElementById("image");
 				image.src = '/crop/' + ids[index];
 				document.getElementById("progress").innerHTML = (index+1) + " / " + ids.length;
 			}
 			
 			
 			async function startTagging(){
-				const response = await fetch("/missingTagIds", {
-					method: "POST",
-					headers: {
-						"Content-Type": "application/json"
-					},
-					body: JSON.stringify({
+				ids = await getJsonPost("/missingTagIds", {
 						'new_tag': document.getElementById("new_tag").value,
 						'require': document.getElementById("require_tags").value,
 						'exclude': document.getElementById("avoid_tags").value,
 						'sort_by': document.getElementById("sort_tag").value
-					})
-				});
+					});
 				
-				ids = await response.json();
 				index = 0;
 				updateImage();
 			}
-			
-		
+
+			document.getElementById("start_tagging").addEventListener("click", startTagging);
 			document.addEventListener("keydown", function(event) {
-				tag_is = false
-				ok = false
+				let tag_is = false
+				let ok = false
 				if (event.keyCode === 13) {
 					//Enter
 					tag_is = true
