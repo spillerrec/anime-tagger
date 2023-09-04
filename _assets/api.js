@@ -30,6 +30,11 @@ export async function getJsonPost(url, request){
 	return response.json()
 }
 
+export async function getIds(tag){
+	return await getJson(`/crops`);
+	return await getJson(`/ids/${tag}`);
+}
+
 export async function getCustomTags(){
 	return await getJson('/custom_tags');
 }

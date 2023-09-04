@@ -102,6 +102,11 @@ def serve_missing_tag_ids():
 		exclude = exclude.split(',')
 	return jsonify(data.getMissingManualTags(wanted_tag, tag, sort, require, exclude))
 	
+	
+@app.route('/crops')
+def serve_crops():
+	return jsonify(data.getCropIds(wanted_tag))
+	
 @app.route('/get-tag-histo/<in_tag>')
 def serve_tag_histo(in_tag):	
 	return jsonify(tagger.tagHistogram(wanted_tag, in_tag))
