@@ -104,6 +104,8 @@ def setCrop(group, id, rects):
 def getCrops(group, id):
 	id = str(id)
 	areas = getAreas()
+	if not group in areas:
+		return []
 	if not id in areas[group]:
 		return []
 	return list(filter(cropIsValid, areas[group][id]))
