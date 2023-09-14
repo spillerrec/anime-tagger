@@ -8,6 +8,7 @@ import sys
 import io
 from PIL import Image
 import requests
+import danbooru
 import data
 import tagger
 
@@ -40,6 +41,7 @@ def hasTag(id, wanted_tag):
 
 wanted_tag = sys.argv[1]
 files = data.getFiles(wanted_tag)
+dan_files = danbooru.getFiles()
 print(files)
 
 app = Flask(__name__)
@@ -103,10 +105,6 @@ def serve_missing_tag_ids():
 	return jsonify(data.getMissingManualTags(wanted_tag, tag, sort, require, exclude))
 	
 	
-@app.route('/crops')
-def serve_crops():
-	return jsonify(data.getCropIds(wanted_tag))
-	
 @app.route('/get-tag-histo/<in_tag>')
 def serve_tag_histo(in_tag):	
 	return jsonify(tagger.tagHistogram(wanted_tag, in_tag))
@@ -168,56 +166,51 @@ def set_ignore():
 	data.setIgnoreTags(wanted_tag, res['tag'], res['remove'])
 	
 	return '[true]'
-	
-@app.route('/thumbnail/<size>/<id>')
-def serve_thumbnail(size, id):
-	image_path = 'images/' + files[int(id)]
-	s = int(size)
-	print(image_path)
-	path = image_path
-	if os.path.exists(path):
-		img = Image.open(path)
-		img.thumbnail((s, s), Image.ANTIALIAS)
-		
-		b = io.BytesIO()
-		img.save(b, 'png')
-		b.seek(0)
-		print(len(img.tobytes()))
-		return send_file(
-			b,#b,
-			mimetype="image/png"
-		)
-	print('Warning, did not find: ' + image_path)
-	return ''
-	
-@app.route('/crop/<id>')
-def serve_crop(id):
-	img = data.getCroppedImage(wanted_tag, id)
-	
+
+def serve_pil_image(image):
 	b = io.BytesIO()
-	img.save(b, 'jpeg')
+	image.save(b, 'jpeg')
 	b.seek(0)
-	print(len(img.tobytes()))
 	return send_file(
-		b,#b,
+		b,
 		mimetype="image/jpeg"
 	)
+
+
+def imageIdToPath(id):
+	# Extract a crop index if it exists
+	index = -1
+	index_split = id.split('-')
+	name = index_split[0]
+	if len(index_split) == 2:
+		index = int(index_split[1])
 	
-@app.route('/images/<id>')
+	# Figure out if we need to look at the danbooru images or the local ones
+	components = name.split('_')
+	if len(components) == 2:
+		return (dan_files[name], index)
+	else:
+		return ('images/' + files[int(name)], index)
+
+def loadImageFromId(id):
+	image_path, index = imageIdToPath(id)
+	
+	if index >= 0:
+		return data.getCroppedImage(wanted_tag, id)
+	else:
+		return Image.open(image_path)
+	
+
+@app.route('/image/<id>')
 def serve_file(id):
-	image_path = files[int(id)]
-	print(image_path)
-	img = Image.open('images/' + image_path)
-	
-	b = io.BytesIO()
-	img.save(b, 'png')
-	b.seek(0)
-	print(len(img.tobytes()))
-	return send_file(
-		b,#b,
-		mimetype="image/png"
-	)
-	return flask.send_from_directory('images/', image_path)
+	return serve_pil_image(loadImageFromId(id))
+
+@app.route('/image/<id>/<size>')
+def serve_file_resized(id, size):
+	s = int(size)
+	image = loadImageFromId(id)
+	image.thumbnail((s, s), Image.ANTIALIAS)
+	return serve_pil_image(image)
 
 
 def readJson(json_path):

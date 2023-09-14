@@ -9,9 +9,7 @@ let updatePage = function(){
 	}
 	ids.forEach(function(id){
 		var img = document.createElement("img");
-		//img.src = '/thumbnail/256/' + id['id'];
-		img.src = '/crop/' + id;//id['id'];
-		//img.title = id['prompt'];
+		img.src = `/image/${id}/512`;
 		resultsDiv.appendChild(img);
 	});
 };
