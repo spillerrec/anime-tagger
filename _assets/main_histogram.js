@@ -78,15 +78,15 @@ async function updateCustomTags() {
 updateCustomTags();
 
 function updateHyperTags(){
-	var resultsDiv = document.getElementById("results");
-	var entries = resultsDiv.getElementsByTagName("input");
-	items = [];
-	for( input of entries ){
+	let resultsDiv = document.getElementById("results");
+	let entries = resultsDiv.getElementsByTagName("input");
+	let items = [];
+	for( let input of entries ){
 		if (input.checked)
 			items.push(input.id);
 	}
 	
-	var updateEntry = {
+	let updateEntry = {
 		'tag' : document.getElementById("search_dropdown").value,
 		'remove' : items
 	};
@@ -105,3 +105,4 @@ function updateHyperTags(){
 }
 
 document.getElementById('updatehyper').addEventListener('click', updateHyperTags);
+document.getElementById('search_dropdown').addEventListener('input', update);
