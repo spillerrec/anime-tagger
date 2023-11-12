@@ -54,7 +54,7 @@ def split_image(id, image_name):
 	base, ext = os.path.splitext(os.path.basename(image_name))
 	tile_path = f"{out_folder}/{base}"
 	print(tile_path)
-	#os.symlink(os.path.abspath(image_name), f"{tile_path}{ext}")
+	os.symlink(os.path.abspath(image_name), f"{tile_path}{ext}")
 
 	# Save a text file with the coordinates of the tile
 	with open(f"{tile_path}.txt", "w") as f:
