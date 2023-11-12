@@ -145,10 +145,16 @@ def getCroppedImage(group, id):
 	if crop:
 		path = getImagePath(group, id)
 		rect = crop
-		img = Image.open(path)
+		img = Image.open(path).convert('RGBA')
 		width, height = img.size
+		
 		if len(img.size) == 2:
-			img = img.convert('RGB')
+			img = img.convert('RGBA')
+		
+		#Remove alpha
+		background = Image.new('RGBA', img.size, (255,255,255))
+		img = Image.alpha_composite(background, img)
+			
 		
 		x = max(0, int(rect['x']))
 		y = max(0, int(rect['y']))
