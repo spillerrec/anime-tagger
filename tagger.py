@@ -6,10 +6,10 @@ import json
 import data
 
 tags = []
-with open("model_tags.json", "r") as f:
+with open("workdir/model_tags.json", "r") as f:
 	tags = json.load(f)
 tag_categories = []
-with open("tag_categories.json", "r") as f:
+with open("workdir/tag_categories.json", "r") as f:
 	tag_categories = json.load(f)
 	
 sess = rt.InferenceSession("model.onnx", providers=rt.get_available_providers())

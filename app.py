@@ -40,6 +40,7 @@ def hasTag(id, wanted_tag):
 	return True
 
 wanted_tag = sys.argv[1]
+data.setSourceDir(wanted_tag)
 files = data.getFiles(wanted_tag)
 dan_files = danbooru.getFiles()
 print(files)
@@ -213,37 +214,17 @@ def serve_file_resized(id, size):
 	return serve_pil_image(image)
 
 
-def readJson(json_path):
-	with open(json_path, encoding="utf-8") as json_file:
-		return json.load(json_file)
-
-def readJsonIf(path, default_value={}):
-	if os.path.exists(path):
-		return readJson(path)
-	return default_value
-	
-def getAreas(path = 'area_tags.json'):
-	extra_tags = {}
-	if os.path.exists(path):
-		return readJson(path)
-	return {}
-	
-def saveAreas(hypertags, path = 'area_tags.json'):
-	with open(path, "w") as f:
-		json.dump(hypertags, f, indent=2)
-		
-areas = getAreas()
-
 @app.route('/add-tag', methods=['POST'])
 def add_tag_area():
 	print(request.json)
 	
+	areas = data.getAreas()
 	if not wanted_tag in areas:
 		areas[wanted_tag] = { }
 	
 	areas[wanted_tag][request.json['id']] = request.json['rects']
 	
-	saveAreas(areas)
+	data.saveAreas(areas)
 	
 	return '[true]'
 	

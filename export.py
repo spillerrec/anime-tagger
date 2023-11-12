@@ -10,6 +10,7 @@ import tagger
 import sys
 
 sourceData = sys.argv[1]
+data.setSourceDir(sourceData)
 remove_tags = ['sensitive', 'explicit', 'anime_coloring', 'general', 'parody', 'cosplay', 'virtual_youtuber', 'questionable']
 add_tags = []#'anime_screencap']
 replace_existing = False

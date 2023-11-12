@@ -3,6 +3,7 @@ import os.path
 import json
 from PIL import Image
 import tagger
+import pathlib
 
 def readJson(json_path):
 	with open(json_path, encoding="utf-8") as json_file:
@@ -13,13 +14,24 @@ def readJsonIf(path, default_value={}):
 		return readJson(path)
 	return default_value
 	
+currentSourceDir = ""
+def setSourceDir(sourceDir):
+	global currentSourceDir
+	currentSourceDir = sourceDir
+	
+def getJsonPath(path):
+	if currentSourceDir == "":
+		raise "Source dir not set!"
+	return 'images/' + currentSourceDir + '/' + path
+	
 def iterateDir(folderPath):
 	files = []
 	dirs = []
 	for f in os.listdir(folderPath):
 		fullPath = os.path.join(folderPath, f)
 		if os.path.isfile(fullPath):
-			files.append(fullPath)
+			if pathlib.Path(fullPath).suffix != ".json":
+				files.append(fullPath)
 		elif os.path.isdir(fullPath):
 			dirs.append(fullPath)
 		else:
@@ -40,20 +52,23 @@ def getFiles(image_group):
 	
 	return res
 	
-def getAreas(path = 'area_tags.json'):
+def getAreas():
 	extra_tags = {}
+	path = getJsonPath('area_tags.json')
 	if os.path.exists(path):
 		return readJson(path)
 	return {}
 	
-def saveAreas(hypertags, path = 'area_tags.json'):
+def saveAreas(hypertags):
+	path = getJsonPath('area_tags.json')
 	with open(path, "w") as f:
 		json.dump(hypertags, f, indent=2)
 	
 taggerCache = None
 taggerCacheDirty = False
-def getTaggerCache(path = 'auto_tag_cache.json'):
+def getTaggerCache():
 	global taggerCache
+	path = getJsonPath('auto_tag_cache.json')
 	if taggerCache:
 		return taggerCache
 	if os.path.exists(path):
@@ -61,26 +76,29 @@ def getTaggerCache(path = 'auto_tag_cache.json'):
 		return taggerCache
 	return {}
 	
-def saveTaggerCache(hypertags, path = 'auto_tag_cache.json'):
+def saveTaggerCache(hypertags):
 	global taggerCache
 	global taggerCacheDirty
 	taggerCacheDirty = True
 	taggerCache = hypertags
 		
-def writeTaggerCache(path = 'auto_tag_cache.json'):
+def writeTaggerCache():
 	global taggerCache
 	global taggerCacheDirty
 	if taggerCacheDirty:
 		taggerCacheDirty = False
+		path = getJsonPath('auto_tag_cache.json')
 		with open(path, "w") as f:
 			json.dump(taggerCache, f, indent=2)
 	
-def getCharacterTags(path = 'character_tags.json'):
+def getCharacterTags():
+	path = getJsonPath('character_tags.json')
 	if os.path.exists(path):
 		return readJson(path)
 	return {}
 	
-def saveCharacterTags(hypertags, path = 'character_tags.json'):
+def saveCharacterTags(hypertags):
+	path = getJsonPath('character_tags.json')
 	with open(path, "w") as f:
 		json.dump(hypertags, f, indent=2)
 
@@ -153,7 +171,7 @@ def getCroppedImage(group, id):
 		
 		#Remove alpha
 		background = Image.new('RGBA', img.size, (255,255,255))
-		img = Image.alpha_composite(background, img)
+		img = Image.alpha_composite(background, img).convert('RGB')
 			
 		
 		x = max(0, int(rect['x']))
@@ -262,12 +280,14 @@ def getTagStrength(group, id, tag):
 	return tagger.tagStrength(auto_tags, tag)
 	
 
-def getIgnoreTags(path = 'ignore_tags.json'):
+def getIgnoreTags():
+	path = getJsonPath('ignore_tags.json')
 	if os.path.exists(path):
 		return readJson(path)
 	return {}
 	
-def saveIgnoreTags(hypertags, path = 'ignore_tags.json'):
+def saveIgnoreTags(hypertags):
+	path = getJsonPath('ignore_tags.json')
 	with open(path, "w") as f:
 		json.dump(hypertags, f, indent=2)
 		
