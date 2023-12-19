@@ -199,7 +199,7 @@ def loadImageFromId(id):
 	if index >= 0:
 		return data.getCroppedImage(wanted_tag, id)
 	else:
-		return Image.open(image_path)
+		return data.asRgb(Image.open(image_path))
 	
 
 @app.route('/image/<id>')

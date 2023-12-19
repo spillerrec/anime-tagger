@@ -157,6 +157,15 @@ def getCropIds(group):
 			ids.append(key + '-' + str(index))
 	return ids
 
+def asRgb(img):
+	if len(img.size) == 2:
+		img = img.convert('RGBA')
+	
+	#Remove alpha
+	background = Image.new('RGBA', img.size, (255,255,255))
+	return Image.alpha_composite(background, img).convert('RGB')
+	
+
 def getCroppedImage(group, id):
 	crop = getCrop(group, id)
 	
@@ -166,13 +175,7 @@ def getCroppedImage(group, id):
 		img = Image.open(path).convert('RGBA')
 		width, height = img.size
 		
-		if len(img.size) == 2:
-			img = img.convert('RGBA')
-		
-		#Remove alpha
-		background = Image.new('RGBA', img.size, (255,255,255))
-		img = Image.alpha_composite(background, img).convert('RGB')
-			
+		img = asRgb(img)
 		
 		x = max(0, int(rect['x']))
 		y = max(0, int(rect['y']))
