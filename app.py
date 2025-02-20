@@ -219,10 +219,8 @@ def add_tag_area():
 	print(request.json)
 	
 	areas = data.getAreas()
-	if not wanted_tag in areas:
-		areas[wanted_tag] = { }
 	
-	areas[wanted_tag][request.json['id']] = request.json['rects']
+	areas[request.json['id']] = request.json['rects']
 	
 	data.saveAreas(areas)
 	

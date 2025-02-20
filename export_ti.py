@@ -10,6 +10,8 @@ import tagger
 import sys
 
 sourceData = sys.argv[1]
+targetTagName = sys.argv[2]
+outputTagName = sys.argv[3]
 data.setSourceDir(sourceData)
 remove_tags = ['sensitive', 'explicit', 'anime_coloring', 'general', 'parody', 'cosplay', 'virtual_youtuber', 'questionable']
 add_tags = []#['anime_screencap']
@@ -17,7 +19,7 @@ replace_existing = False
 
 cropIds = data.getCropIds(sourceData)
 
-outFolder = 'out/' + sourceData
+outFolder = 'out/' + sourceData + '_' + outputTagName
 if not os.path.exists(outFolder):
 	os.makedirs(outFolder)
 	
@@ -37,23 +39,20 @@ for id in tqdm(cropIds):
 		tags = tagger.tagsAboveThreshold(tagResult, 0.35)
 		
 		manual_tags = data.getManualTags(sourceData, id) + batchTags
-		
-		#if 'jiyuuga-saki-uniform' in manual_tags:
-		#	manual_tags.remove('jiyuuga-saki-uniform')
+		if not targetTagName in manual_tags:
+			continue
+		manual_tags = [outputTagName]
 		
 		#Remove tags which should be ignored if a specific other tag exists
-		for manual_tag in manual_tags:
-			for ignore in data.getIgnoreTagsForTag(sourceData, manual_tag):
-				if ignore in tags:
-					tags.remove(ignore)
+		for ignore in data.getIgnoreTagsForTag(sourceData, targetTagName):
+			if ignore in tags:
+				tags.remove(ignore)
 		
 		#Remove disallowed tags
 		for tag in remove_tags:
 			if tag in tags:
 				tags.remove(tag)
 		
-		#if 'thighhighs' in manual_tags:
-		#	manual_tags.remove('thighhighs')
 		tags = manual_tags + add_tags + tags
 		
 		

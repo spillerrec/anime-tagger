@@ -52,6 +52,27 @@ def getFiles(image_group):
 	
 	return res
 	
+def getBatchLookup(image_group):
+	imagePathFull = 'images/' + image_group
+	
+	files, dirs = iterateDir(imagePathFull)
+	lookup = {}
+	id = 0
+	for dir in dirs:
+		baseDir = dir.split('\\')[-1] #TODO: unreliable
+		filesSub, _ = iterateDir(dir)
+		for file in filesSub:
+			lookup[id] = baseDir
+			id = id + 1
+	
+	return lookup
+	
+def getBatchInfo():
+	path = getJsonPath('batches.json')
+	if os.path.exists(path):
+		return readJson(path)
+	return {}
+	
 def getAreas():
 	extra_tags = {}
 	path = getJsonPath('area_tags.json')
@@ -116,17 +137,15 @@ def getImagePath(group, id):
 	
 def setCrop(group, id, rects):
 	areas = getAreas()
-	areas[group][id] = rects
+	areas[id] = rects
 	saveAreas(areas)
 	
 def getCrops(group, id):
 	id = str(id)
 	areas = getAreas()
-	if not group in areas:
+	if not id in areas:
 		return []
-	if not id in areas[group]:
-		return []
-	return list(filter(cropIsValid, areas[group][id]))
+	return list(filter(cropIsValid, areas[id]))
 	
 def getCrop(group, id):
 	areas = getAreas()
@@ -148,11 +167,9 @@ def cropIsValid(rect):
 	
 def getCropIds(group):
 	areas = getAreas()
-	if not group in areas:
-		return []
 	
 	ids = []
-	for key, rects in areas[group].items():
+	for key, rects in areas.items():
 		for index, rect in enumerate(filter(cropIsValid, rects)):
 			ids.append(key + '-' + str(index))
 	return ids
@@ -208,26 +225,21 @@ def getAutoTags(group, id):
 def hasManualTag(group, id, tag):
 	charaTags = getCharacterTags()
 	
-	if not group in charaTags:
+	if not id in charaTags:
 		return False
 	
-	if not id in charaTags[group]:
-		return False
-	
-	if not tag in charaTags[group][id]:
+	if not tag in charaTags[id]:
 		return False
 		
 	return True
 	
 def getManualTags(group, id):
 	charaTags = getCharacterTags()
-	if not group in charaTags:
-		return []
-	if not id in charaTags[group]:
+	if not id in charaTags:
 		return []
 	
 	tags = []
-	for tag, is_set in charaTags[group][id].items():
+	for tag, is_set in charaTags[id].items():
 		if is_set:
 			tags.append(tag)
 	return tags
@@ -237,17 +249,15 @@ def getManualTag(group, id, tag):
 		return False
 	
 	charaTags = getCharacterTags()
-	return charaTags[group][id][tag]
+	return charaTags[id][tag]
 	
 def setManualTag(group, id, tag, value):
 	charaTags = getCharacterTags()
 	
-	if not group in charaTags:
-		charaTags[group] = {}
-	if not id in charaTags[group]:
-		charaTags[group][id] = {}
+	if not id in charaTags:
+		charaTags[id] = {}
 	
-	charaTags[group][id][tag] = value
+	charaTags[id][tag] = value
 	saveCharacterTags(charaTags)
 	
 def getMissingManualTags(group, tag, sort_tag=None, require=[], avoid=[]):
@@ -296,17 +306,13 @@ def saveIgnoreTags(hypertags):
 		
 def setIgnoreTags(group, on_tag, ignore_tags):
 	ignoreJson = getIgnoreTags()
-	if not group in ignoreJson:
-		ignoreJson[group] = {}
 	
-	ignoreJson[group][on_tag] = ignore_tags
+	ignoreJson[on_tag] = ignore_tags
 	saveIgnoreTags(ignoreJson)
 	
 def getIgnoreTagsForTag(group, on_tag):
 	ignoreJson = getIgnoreTags()
-	if not group in ignoreJson:
+	if not on_tag in ignoreJson:
 		return []
-	if not on_tag in ignoreJson[group]:
-		return []
-	return ignoreJson[group][on_tag]
+	return ignoreJson[on_tag]
 	

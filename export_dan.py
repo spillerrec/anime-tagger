@@ -15,8 +15,8 @@ import danbooru
 files = danbooru.getFiles()
 ids = files.keys()
 
-out_folder = 'out_emi'
-filter_tags = ['yusa_emi']
+out_folder = 'out/shikei_dan'
+filter_tags = ['shikei']
 avoid_tags = []
 
 textual_inversion_tag = None
@@ -48,7 +48,7 @@ if len(avoid_tags) > 0:
 	ids = [x for x in ids if not hasTag(x, avoid_tags)]
 
 def split_image(id, image_name):
-	base_prompt = danbooru.get_prompt(id).replace('(', '\\(').replace(')', '\\)')
+	base_prompt = "shikei, " + danbooru.get_prompt(id).replace('(', '\\(').replace(')', '\\)')
 
 	# Save each of the selected tiles as an image with the filename from the original file
 	base, ext = os.path.splitext(os.path.basename(image_name))
