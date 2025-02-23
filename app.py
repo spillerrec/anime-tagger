@@ -11,6 +11,7 @@ import requests
 import danbooru
 import data
 import tagger
+from tqdm import tqdm
 
 
 def hasTag(id, wanted_tag):
@@ -229,6 +230,16 @@ def add_tag_area():
 @app.route('/custom_tags')
 def get_custom_tags():
 	return jsonify(data.getAllManualTags(wanted_tag))
+	
+@app.route('/autotag')
+def autotag():
+	cropIds = data.getCropIds(wanted_tag)
+	
+	for id in tqdm(cropIds):
+		tagResult = data.getAutoTags(wanted_tag, id)
+	data.writeTaggerCache()
+	return 'done'
+
 
 if __name__ == '__main__':
 	app.run(host="localhost", port=8888)
