@@ -110,26 +110,26 @@ def serve_missing_tag_ids():
 @app.route('/get-tag-histo/<in_tag>')
 def serve_tag_histo(in_tag):	
 	return jsonify(tagger.tagHistogram(wanted_tag, in_tag))
+	
+@app.route('/get-search/<in_tag>')
+def serve_search(in_tag):
 	cropIds = data.getCropIds(wanted_tag)
 
-	histogram = {}
+	items = []
 
 	for id in cropIds:
-		if not data.getManualTag(wanted_tag, id, in_tag):
-			continue
+		if data.getManualTag(wanted_tag, id, in_tag):
+			items.append({'id': id, 'weight':1.0, 'checked':True})
 		
-		tagResult = data.getAutoTags(wanted_tag, id)
-		tags = tagger.tagsAboveThreshold(tagResult, 0.35)
+		tagResult = 0.0
+		if tagger.isValidTag(in_tag):
+			tagResult = data.getTagStrength(wanted_tag, id, in_tag)
 		
-		for tag in tags:
-			if not tag in histogram:
-				histogram[tag] = 0
-			histogram[tag] = 1 + histogram[tag]
+		items.append({'id':id, 'weight':tagResult, 'checked':tagResult > 0.35})
 		
-	res = sorted(histogram.items(), key=lambda x:x[1])
+	res = sorted(items, key=lambda x:x['weight'])
 	res.reverse()
 	
-	print(res)
 	return jsonify(res)
 	
 	

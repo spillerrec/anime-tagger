@@ -25,6 +25,8 @@ def evaluate(image):
 	res = sess.run(None, {input_name: numpy.expand_dims(arr.astype(numpy.float32), 0)})
 	return res[0][0]
 
+def isValidTag(index):
+	return index in tags
 
 def tag(index):
 	return tags[index]

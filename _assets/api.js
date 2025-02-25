@@ -43,3 +43,7 @@ export async function getCustomTags(){
 export async function getHistogramForTag(tag){
 	return await getJson('/get-tag-histo/' + tag);
 }
+
+export async function getSearch(tag){
+	return await getJson(`/get-search/${tag}`);
+}
