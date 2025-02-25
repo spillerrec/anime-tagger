@@ -211,7 +211,7 @@ def serve_file(id):
 def serve_file_resized(id, size):
 	s = int(size)
 	image = loadImageFromId(id)
-	image.thumbnail((s, s), Image.ANTIALIAS)
+	image.thumbnail((s, s), Image.LANCZOS)
 	return serve_pil_image(image)
 
 
