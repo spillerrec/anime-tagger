@@ -55,6 +55,27 @@ app.config['UPLOAD_FOLDER'] = '_assets'
 def allowed_file(filename):
 	return '.' in filename and \
 		   filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+		   
+@app.route('/menuitems')
+def serve_menuitems():
+	return jsonify([
+		{
+			'text': 'Mark crops',
+			'url': '/tag'
+		},
+		{
+			'text': 'Automatic tagging',
+			'url': '/autotag'
+		},
+		{
+			'text': 'Manual tagging',
+			'url': '/set_tag'
+		},
+		{
+			'text': 'Tag filtering',
+			'url': '/histogram'
+		}
+	])
 			  
 
 @app.route('/assets/<item>')

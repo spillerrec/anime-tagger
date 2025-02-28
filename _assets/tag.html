@@ -36,11 +36,13 @@
 		</style>
 	</head>
 	<body>
+		<ul id="menu"></ul>
 		<button id="addrect" style="display:block">Add rect</button>
 		<button id="addfull" style="display:block">Use entire image</button>
 		<div id="container">
 		<img id="image" onmousedown="startDrag(event)">
 		</div>
+		<script type="module" src="/assets/menu.js"></script>
 		<script>
 		
 var getJSON = function(url, callback) {

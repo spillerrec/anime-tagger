@@ -73,3 +73,21 @@ p{
 	background-color: green;
 }
 #results *{ text-transform: capitalize; }
+
+
+#menu {
+	margin: 0;
+	padding: 0;
+}
+#menu li{
+	display:inline;
+	
+	border-radius: 10px;
+	background-color: #181818;
+	padding: 10px;
+	margin: 5px;
+	
+}
+#menu a{
+	color:white;
+}

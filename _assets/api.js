@@ -47,3 +47,7 @@ export async function getHistogramForTag(tag){
 export async function getSearch(tag){
 	return await getJson(`/get-search/${tag}`);
 }
+
+export async function getMenu(){
+	return await getJson(`/menuitems`);
+}
