@@ -3,6 +3,7 @@ import { getCustomTags, getHistogramForTag } from './api'
 let ids = [];
 
 var updatePage = function(){
+	let searchItem = document.getElementById("search_dropdown").value;
 	var resultsDiv = document.getElementById("results");
 	while (resultsDiv.firstChild) {
 		resultsDiv.removeChild(resultsDiv.firstChild);
@@ -45,7 +46,10 @@ var updatePage = function(){
 			
 			div2.addEventListener('click', function(event){
 				event.preventDefault();
-				name.checked ^= 1;
+				if (event.altKey)
+					window.open('/list/' + searchItem + '/' + id.tag + '/', '_blank').focus();
+				else
+					name.checked ^= 1;
 			} );
 			name.addEventListener('click', function(event){
 				event.stopPropagation();
