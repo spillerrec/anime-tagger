@@ -32,7 +32,10 @@ for id in tqdm(cropIds):
 	
 	cropped = data.getCroppedImage(sourceData, id)
 	if cropped:
-		batchTags = batchInfo[batchLookup[int(id.split('-')[0])]]['tags']
+		batchTags = []
+		batch = batchLookup[int(id.split('-')[0])]
+		if batch in batchInfo:
+			batchInfo[batch]['tags']
 		tagResult = data.getAutoTags(sourceData, id)
 		tags = tagger.tagsAboveThreshold(tagResult, 0.35)
 		
