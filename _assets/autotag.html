@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<link rel="stylesheet" href="/assets/main.css">
+		<title>Automatic tagging</title>
+	</head>
+	<body>
+		<ul id="menu"></ul>
+		<h1>Automatic tagging</h1>
+		<div id="progressbar">
+		
+		<div>
+		<script type="module" src="/assets/menu.js"></script>
+		<script type="module">
+		import { runProgressBar } from '/assets/progressbar'
+		runProgressBar('progressbar', 'autotag');
+		</script>
+	</body>
+</html>

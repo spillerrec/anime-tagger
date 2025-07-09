@@ -12,6 +12,7 @@ import danbooru
 import data
 import tagger
 from tqdm import tqdm
+import threading
 
 
 def hasTag(id, wanted_tag):
@@ -45,6 +46,8 @@ data.setSourceDir(wanted_tag)
 files = data.getFiles(wanted_tag)
 dan_files = danbooru.getFiles()
 print(files)
+
+progress_bars = {}
 
 app = Flask(__name__)
 
@@ -252,15 +255,26 @@ def add_tag_area():
 def get_custom_tags():
 	return jsonify(data.getAllManualTags(wanted_tag))
 	
-@app.route('/autotag')
-def autotag():
+def runAutotag():
 	cropIds = data.getCropIds(wanted_tag)
 	
-	for id in tqdm(cropIds):
+	progress = tqdm(cropIds)
+	for id in progress:
+		progress_bars['autotag'] = progress.format_dict
 		tagResult = data.getAutoTags(wanted_tag, id)
 	data.writeTaggerCache()
-	return 'done'
+	progress_bars['autotag'] = progress.format_dict
+	
 
+@app.route('/autotag')
+def autotag():
+	thread = threading.Thread(target=runAutotag)
+	thread.start()
+	return flask.send_from_directory(app.config['UPLOAD_FOLDER'], 'autotag.html')
+
+@app.route('/progress/<bar>')
+def progress(bar):
+	return jsonify(progress_bars[bar])
 
 if __name__ == '__main__':
 	app.run(host="localhost", port=8888)
