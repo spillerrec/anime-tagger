@@ -11,6 +11,7 @@ import requests
 import danbooru
 import data
 import tagger
+from export import Exporter
 from tqdm import tqdm
 import threading
 
@@ -77,6 +78,10 @@ def serve_menuitems():
 		{
 			'text': 'Tag filtering',
 			'url': '/histogram'
+		},
+		{
+			'text': 'Export images',
+			'url': '/export'
 		}
 	])
 			  
@@ -271,6 +276,25 @@ def autotag():
 	thread = threading.Thread(target=runAutotag)
 	thread.start()
 	return flask.send_from_directory(app.config['UPLOAD_FOLDER'], 'autotag.html')
+	
+def runExport():
+	exporter = Exporter(wanted_tag)
+	cropIds = exporter.allIds()
+
+	progress = tqdm(cropIds)
+	for id in progress:
+		exporter.export(id)
+		progress_bars['export'] = progress.format_dict
+				
+	data.writeTaggerCache()
+	progress_bars['export'] = progress.format_dict
+
+@app.route('/export')
+def export():
+	thread = threading.Thread(target=runExport)
+	thread.start()
+	return flask.send_from_directory(app.config['UPLOAD_FOLDER'], 'export.html')
+	
 
 @app.route('/progress/<bar>')
 def progress(bar):
