@@ -51,3 +51,10 @@ export async function getSearch(tag){
 export async function getMenu(){
 	return await getJson(`/menuitems`);
 }
+
+export async function getTagList(){
+	return await getJson(`/data/taglist`);
+}
+export async function getAutotags(id){
+	return await getJson(`/data/autotags/${id}`);
+}

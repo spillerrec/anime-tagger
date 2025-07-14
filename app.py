@@ -243,6 +243,21 @@ def serve_file_resized(id, size):
 	image.thumbnail((s, s), Image.LANCZOS)
 	return serve_pil_image(image)
 
+@app.route('/view/image/<id>')
+def view_image(id):
+	return flask.send_from_directory(app.config['UPLOAD_FOLDER'], 'view_image.html')
+
+
+@app.route('/data/taglist')
+def data_taglist():
+	return jsonify(tagger.tagList())
+
+@app.route('/data/autotags/<id>')
+def data_autotags(id):
+	return jsonify(data.getAutoTags(wanted_tag, id))
+
+
+
 
 @app.route('/add-tag', methods=['POST'])
 def add_tag_area():

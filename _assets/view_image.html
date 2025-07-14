@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<link rel="stylesheet" href="/assets/main.css">
+		<title>Image</title>
+	</head>
+	<body id="viewimage">
+		<ul id="menu"></ul>
+		<h1>Image</h1>
+		
+		<script type="module" src="/assets/menu.js"></script>
+		<script type="module">
+			import { getTagList, getAutotags } from '/assets/api'
+			
+			function extractId(url){
+				const match = url.match(/\/view\/image\/(\d+-\d+)/);
+				if (match) {
+					return match[1];
+				}
+			}
+			
+			const id = extractId(window.location.href);
+			console.log('Image ID:', id);
+			const img = document.createElement('img');
+			img.src = '/image/' + id;
+			document.getElementById('viewimage').appendChild(img);
+			
+			
+			const tagList = await getTagList();
+			var autotags = await getAutotags(id);
+			var combined = tagList.map((key, index) => [key, autotags[index]]);
+			combined.sort((a, b) => a[1] - b[1]).reverse();
+			console.log(combined);
+			
+			
+			const div = document.createElement('ul');
+			div.id = 'tags';
+			for (let i=0; i<100; i++){
+				const li = document.createElement('li');
+				li.textContent = combined[i][0] + " " + (combined[i][1] * 100).toFixed(1);
+				div.appendChild(li);
+			}
+			
+			
+			document.getElementById('viewimage').appendChild(div);
+			
+		</script>
+	</body>
+</html>
