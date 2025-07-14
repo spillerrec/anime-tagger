@@ -264,6 +264,7 @@ def runAutotag():
 	cropIds = data.getCropIds(wanted_tag)
 	
 	progress = tqdm(cropIds)
+	progress_bars['autotag'] = progress.format_dict
 	for id in progress:
 		progress_bars['autotag'] = progress.format_dict
 		tagResult = data.getAutoTags(wanted_tag, id)
@@ -282,6 +283,7 @@ def runExport():
 	cropIds = exporter.allIds()
 
 	progress = tqdm(cropIds)
+	progress_bars['export'] = progress.format_dict
 	for id in progress:
 		exporter.export(id)
 		progress_bars['export'] = progress.format_dict
