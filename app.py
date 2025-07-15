@@ -247,6 +247,30 @@ def serve_file_resized(id, size):
 def view_image(id):
 	return flask.send_from_directory(app.config['UPLOAD_FOLDER'], 'view_image.html')
 
+def flatten(nested):
+	return [item for sublist in nested for item in sublist]
+
+@app.route('/data/image/<id>')
+def data_image(id):
+	tagList = tagger.tagList()
+	tagStrength = data.getAutoTags(wanted_tag, id)
+	
+	manual_tags = data.getManualTags(wanted_tag, id)
+	ignore_tags = flatten([data.getIgnoreTagsForTag(wanted_tag, tag) for tag in manual_tags])
+	
+	tags = [{
+		'tag': tag,
+		'strength': strength,
+		'enabled': strength > 0.35 and not tag in ignore_tags
+	} for tag, strength in zip(tagList, tagStrength)]
+	tags = sorted(tags, key=lambda x: x['strength'], reverse=True)[:100]
+	
+	return jsonify({
+		'manual_tags': manual_tags,
+		'auto_tags': tags,
+		'ignore_tags': ignore_tags
+	})
+
 
 @app.route('/data/taglist')
 def data_taglist():

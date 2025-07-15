@@ -2,15 +2,35 @@
 <html>
 	<head>
 		<link rel="stylesheet" href="/assets/main.css">
+		<link rel="stylesheet" href="/assets/taglist.css">
 		<title>Image</title>
 	</head>
 	<body id="viewimage">
 		<ul id="menu"></ul>
 		<h1>Image</h1>
+		<img id="imagebox" style="max-width:1024px;max-height:1024px">
+		
+		<h2>Manual added tags</h2>
+		<ul id="manual_tags">
+		
+		</ul>
+		
+		<h2>Automatically added tags</h2>
+		<table>
+			<thead>
+				<th>Tag</th>
+				<th>Strength</th>
+				<th>Category</th>
+			</thead>
+			<tbody id="autotags">
+				
+			</tbody>
+		</table>
+		
 		
 		<script type="module" src="/assets/menu.js"></script>
 		<script type="module">
-			import { getTagList, getAutotags } from '/assets/api'
+			import { getImageInfo } from '/assets/api'
 			
 			function extractId(url){
 				const match = url.match(/\/view\/image\/(\d+-\d+)/);
@@ -21,28 +41,40 @@
 			
 			const id = extractId(window.location.href);
 			console.log('Image ID:', id);
-			const img = document.createElement('img');
+			const img = document.getElementById('imagebox');
 			img.src = '/image/' + id;
-			document.getElementById('viewimage').appendChild(img);
 			
 			
-			const tagList = await getTagList();
-			var autotags = await getAutotags(id);
-			var combined = tagList.map((key, index) => [key, autotags[index]]);
-			combined.sort((a, b) => a[1] - b[1]).reverse();
-			console.log(combined);
+			const imageInfo = await getImageInfo(id);
+			var auto_tags = imageInfo['auto_tags']
 			
-			
-			const div = document.createElement('ul');
-			div.id = 'tags';
-			for (let i=0; i<100; i++){
+			const manual_tag_list = document.getElementById('manual_tags');
+			imageInfo['manual_tags'].forEach((tag) => {
 				const li = document.createElement('li');
-				li.textContent = combined[i][0] + " " + (combined[i][1] * 100).toFixed(1);
-				div.appendChild(li);
+				li.textContent = tag;
+				manual_tag_list.appendChild(li);
+			});
+			
+			const tbody = document.getElementById('autotags');
+			console.log(tbody);
+			for (let i=0; i<100; i++){
+				const tr = document.createElement('tr');
+				const td_tag = document.createElement('td');
+				const td_strength = document.createElement('td');
+				const td_category = document.createElement('td');
+				tr.appendChild(td_tag);
+				tr.appendChild(td_strength);
+				tr.appendChild(td_category);
+				
+				td_tag.textContent = auto_tags[i]['tag'];
+				td_strength.textContent = (auto_tags[i]['strength'] * 100).toFixed(1);
+				
+				if (auto_tags[i]['enabled']){
+					tr.classList.add('added');
+				}
+				
+				tbody.appendChild(tr);
 			}
-			
-			
-			document.getElementById('viewimage').appendChild(div);
 			
 		</script>
 	</body>

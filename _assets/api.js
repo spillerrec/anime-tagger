@@ -58,3 +58,6 @@ export async function getTagList(){
 export async function getAutotags(id){
 	return await getJson(`/data/autotags/${id}`);
 }
+export async function getImageInfo(id){
+	return await getJson(`/data/image/${id}`);
+}
