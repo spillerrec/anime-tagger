@@ -9,6 +9,7 @@
 		<ul id="menu"></ul>
 		<h1>Image</h1>
 		<img id="imagebox" style="max-width:1024px;max-height:1024px">
+		<p id="prompt"></p>
 		
 		<h2>Manual added tags</h2>
 		<ul id="manual_tags">
@@ -46,7 +47,7 @@
 			
 			
 			const imageInfo = await getImageInfo(id);
-			var auto_tags = imageInfo['auto_tags']
+			document.getElementById('prompt').textContent = imageInfo['prompt'];
 			
 			const manual_tag_list = document.getElementById('manual_tags');
 			imageInfo['manual_tags'].forEach((tag) => {
@@ -66,10 +67,11 @@
 				tr.appendChild(td_strength);
 				tr.appendChild(td_category);
 				
-				td_tag.textContent = auto_tags[i]['tag'];
-				td_strength.textContent = (auto_tags[i]['strength'] * 100).toFixed(1);
+				var auto_tags = imageInfo['auto_tags'][i];
+				td_tag.textContent = auto_tags['tag'];
+				td_strength.textContent = (auto_tags['strength'] * 100).toFixed(1);
 				
-				if (auto_tags[i]['enabled']){
+				if (auto_tags['enabled']){
 					tr.classList.add('added');
 				}
 				

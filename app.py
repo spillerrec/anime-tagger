@@ -252,11 +252,20 @@ def flatten(nested):
 
 @app.route('/data/image/<id>')
 def data_image(id):
+	from export import BatchInfo, calculateTagString
 	tagList = tagger.tagList()
 	tagStrength = data.getAutoTags(wanted_tag, id)
 	
+	batchInfo = BatchInfo(wanted_tag)
+	batch = batchInfo.getBatchFromCropId(id)
+	batchTags = batch['tags'] if batch is not None else []
+	
+	active_tags = tagger.tagsAboveThreshold(tagStrength, 0.35)
+	
 	manual_tags = data.getManualTags(wanted_tag, id)
 	ignore_tags = flatten([data.getIgnoreTagsForTag(wanted_tag, tag) for tag in manual_tags])
+	
+	prompt = calculateTagString(wanted_tag, active_tags, manual_tags, batchTags)
 	
 	tags = [{
 		'tag': tag,
@@ -268,7 +277,8 @@ def data_image(id):
 	return jsonify({
 		'manual_tags': manual_tags,
 		'auto_tags': tags,
-		'ignore_tags': ignore_tags
+		'ignore_tags': ignore_tags,
+		'prompt': prompt
 	})
 
 
