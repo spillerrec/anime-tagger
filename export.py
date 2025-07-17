@@ -77,7 +77,7 @@ class Exporter:
 			manual_tags = data.getManualTags(self.sourceData, id)
 			
 			prompt = calculateTagString(self.sourceData, tags, manual_tags, batchTags)
-			with open(outPath + '.txt', 'w') as f:
+			with open(outPath + '.txt', 'w', encoding="utf-8") as f:
 				f.write(prompt)
 				
 			if not already_exported or replace_existing:
