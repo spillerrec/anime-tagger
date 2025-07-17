@@ -22,8 +22,26 @@ class BatchInfo:
 			return None
 		
 		return self.batchInfo[batch]
+		
+		
+def flatten(nested):
+	return [item for sublist in nested for item in sublist]
 	
-def calculateTagString(sourceData, tags, manual_tags, batchTags=[]):
+def transform_text_strings(text):
+	text = text.lower()
+	text = text.replace(' ', '_')
+	text = ''.join(flatten(' '.join(text)))
+	text = text.replace('\n', '|')
+	#text = text.replace('♥', 'heart') # Lets leave them for now, it seems like they do have tolkens
+	#text = text.replace('★', 'star')
+	#text = text.replace('☆', 'star')
+	text = text.replace(',', 'comma')
+	text = text.replace('è', 'e') # Not sure about what to do with these
+	# ~ remains '~' for now
+	
+	return f'text "{text}"'
+	
+def calculateTagString(sourceData, tags, manual_tags, text_strings, batchTags=[]):
 	manual_tags = manual_tags + batchTags
 	
 	#if 'jiyuuga-saki-uniform' in manual_tags:
@@ -45,7 +63,12 @@ def calculateTagString(sourceData, tags, manual_tags, batchTags=[]):
 	#	manual_tags.remove('thighhighs')
 	tags = manual_tags + tags
 	
-	return ', '.join(tags).replace('_', ' ')
+	text = ""
+	if len(text_strings) > 0:
+		for line in text_strings:
+			text = text + transform_text_strings(line) + ", "
+	
+	return text + ', '.join(tags).replace('_', ' ')
 
 class Exporter:
 	def __init__(self, sourceData):
@@ -76,7 +99,9 @@ class Exporter:
 			
 			manual_tags = data.getManualTags(self.sourceData, id)
 			
-			prompt = calculateTagString(self.sourceData, tags, manual_tags, batchTags)
+			text_strings = data.getText(id)
+			
+			prompt = calculateTagString(self.sourceData, tags, manual_tags, text_strings, batchTags)
 			with open(outPath + '.txt', 'w', encoding="utf-8") as f:
 				f.write(prompt)
 				

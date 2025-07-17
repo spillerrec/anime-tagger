@@ -316,3 +316,36 @@ def getIgnoreTagsForTag(group, on_tag):
 		return []
 	return ignoreJson[on_tag]
 	
+	
+	
+def getTexts():
+	path = getJsonPath('texts.json')
+	if os.path.exists(path):
+		return readJson(path)
+	return {}
+	
+def saveTexts(texts):
+	path = getJsonPath('texts.json')
+	with open(path, "w") as f:
+		json.dump(texts, f, indent=2)
+	
+def setText(id, text):
+	texts = getTexts()
+	texts[id] = text
+	saveTexts(texts)
+	
+def getText(id):
+	id = str(id)
+	texts = getTexts()
+	if not id in texts:
+		return []
+	return texts[id]
+	
+def getMissingTextIds():
+	allIds = getCropIds(currentSourceDir)
+	texts = getTexts()
+	
+	ids = list(filter(lambda x: not x in texts, allIds))
+	
+	return ids
+	

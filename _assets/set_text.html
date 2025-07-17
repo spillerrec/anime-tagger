@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<link rel="stylesheet" href="/assets/main.css">
+		<title>Set new tag on images</title>
+	</head>
+	<body>
+		<ul id="menu"></ul>
+		<h1>Set text on images:</h1>
+		<div id="search_config" class="box">
+			<button id="start_tagging" style="display:block">Start tagging</button>
+		</div>
+		<div id="container">
+		<img id="image">
+		</div>
+		<div id="update" class="box">
+			<p id="progress">? / ?</p>
+			<textarea style="display:block" id="text1" rows="4" cols="33"></textarea>
+			<textarea style="display:block" id="text2" rows="4" cols="33"></textarea>
+			<textarea style="display:block" id="text3" rows="4" cols="33"></textarea>
+			<textarea style="display:block" id="text4" rows="4" cols="33"></textarea>
+			<button id="set" style="display:block">Save</button>
+		</div>
+		<script type="module" src="/assets/menu.js"></script>
+		<script type="module">
+			import { getJson } from '/assets/api'
+			
+			let index = 0
+			let ids = [];
+			
+			
+			function updateImage(){
+				let image = document.getElementById("image");
+				image.src = '/image/' + ids[index];
+				document.getElementById("progress").innerHTML = (index+1) + " / " + ids.length;
+			}
+			
+			
+			async function startTagging(){
+				ids = await getJson("/missingTextIds");
+				console.log(ids)
+				
+				index = 0;
+				updateImage();
+			}
+
+			document.getElementById("start_tagging").addEventListener("click", startTagging);
+			function saveText(){
+				let text1 = document.getElementById("text1").value;
+				let text2 = document.getElementById("text2").value;
+				let text3 = document.getElementById("text3").value;
+				let text4 = document.getElementById("text4").value;
+				
+				var texts = [];
+				if (text1 !== "")
+					texts.push(text1);
+				if (text2 !== "")
+					texts.push(text2);
+				if (text3 !== "")
+					texts.push(text3);
+				if (text4 !== "")
+					texts.push(text4);
+				
+				
+				if (texts.length > 0)
+				{
+					fetch("/set-text", {
+						method: "POST",
+						headers: {
+							"Content-Type": "application/json"
+						},
+						body: JSON.stringify({
+							'id': ids[index],
+							'text': texts
+						})
+					})
+						.then(response => response.json())
+						.then(data => console.log(data))
+						.catch(error => console.error(error));
+					
+					document.getElementById("text1").value = "";
+					document.getElementById("text2").value = "";
+					document.getElementById("text3").value = "";
+					document.getElementById("text4").value = "";
+				}
+				
+				index++;
+				updateImage();
+				
+			}
+			document.getElementById("set").addEventListener("click", saveText);
+			document.addEventListener("keydown", function(event) {
+				if (event.ctrlKey && event.keyCode === 13) { // CTRL + Enter
+					saveText();
+				}
+			});
+		</script>
+	</body>
+</html>

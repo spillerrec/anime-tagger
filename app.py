@@ -118,6 +118,10 @@ def serve_toggle():
 @app.route('/set_tag')
 def serve_set_tag():
 	return flask.send_from_directory(app.config['UPLOAD_FOLDER'], 'set_category.html')
+	
+@app.route('/set_text')
+def serve_set_text():
+	return flask.send_from_directory(app.config['UPLOAD_FOLDER'], 'set_text.html')
 
 @app.route('/ids')
 def serve_ids():
@@ -134,6 +138,10 @@ def serve_missing_tag_ids():
 	if exclude:
 		exclude = exclude.split(',')
 	return jsonify(data.getMissingManualTags(wanted_tag, tag, sort, require, exclude))
+	
+@app.route('/missingTextIds')
+def serve_missing_text_ids():
+	return jsonify(data.getMissingTextIds())
 	
 	
 @app.route('/get-tag-histo/<in_tag>')
@@ -186,6 +194,15 @@ def set_category():
 	print(res)
 	
 	data.setManualTag(wanted_tag, res['id'], res['tag'], res['value'])
+	
+	return '[true]'
+	
+@app.route('/set-text', methods=['POST'])
+def set_text():
+	res = request.json
+	print(res)
+	
+	data.setText(res['id'], res['text'])
 	
 	return '[true]'
 	
@@ -265,7 +282,9 @@ def data_image(id):
 	manual_tags = data.getManualTags(wanted_tag, id)
 	ignore_tags = flatten([data.getIgnoreTagsForTag(wanted_tag, tag) for tag in manual_tags])
 	
-	prompt = calculateTagString(wanted_tag, active_tags, manual_tags, batchTags)
+	text_strings = data.getText(id)
+	
+	prompt = calculateTagString(wanted_tag, active_tags, manual_tags, text_strings, batchTags)
 	
 	tags = [{
 		'tag': tag,
