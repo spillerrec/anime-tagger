@@ -5,6 +5,7 @@ import os.path
 
 import data
 import tagger
+import numpy as np
 
 
 class BatchInfo:
@@ -28,6 +29,18 @@ def flatten(nested):
 	return [item for sublist in nested for item in sublist]
 	
 def transform_text_strings(text):
+	prefix = ''
+	upper_count = sum(1 for c in text if c.isupper())
+	lower_count = sum(1 for c in text if c.islower())
+	total = upper_count + lower_count
+	if total != 0:
+		if upper_count / total > 0.9:
+			prefix = 'allcaps'
+		elif lower_count / total > 0.9:
+			prefix = 'lowercase'
+		else:
+			prefix = 'capitalized'
+	
 	text = text.lower()
 	text = text.replace(' ', '_')
 	text = ''.join(flatten(' '.join(text)))
@@ -39,7 +52,7 @@ def transform_text_strings(text):
 	text = text.replace('è', 'e') # Not sure about what to do with these
 	# ~ remains '~' for now
 	
-	return f'text "{text}"'
+	return f'{prefix} "{text}"'
 	
 def calculateTagString(sourceData, tags, manual_tags, text_strings, batchTags=[]):
 	manual_tags = manual_tags + batchTags
@@ -54,7 +67,7 @@ def calculateTagString(sourceData, tags, manual_tags, text_strings, batchTags=[]
 				tags.remove(ignore)
 	
 	#Remove disallowed tags
-	remove_tags = ['sensitive', 'explicit', 'anime_coloring', 'general', 'parody', 'cosplay', 'virtual_youtuber', 'questionable']
+	remove_tags = ['sensitive', 'explicit', 'anime_coloring', 'general', 'parody', 'cosplay', 'virtual_youtuber', 'questionable', 'english_text', 'chinese_text']
 	for tag in remove_tags:
 		if tag in tags:
 			tags.remove(tag)
@@ -77,6 +90,7 @@ class Exporter:
 		self.batchInfo = BatchInfo(sourceData)
 		
 		self.outFolder = 'out/' + sourceData
+		self.outFolderMask = 'out/' + sourceData + '_masks'
 		if not os.path.exists(self.outFolder):
 			os.makedirs(self.outFolder)
 	
@@ -107,4 +121,17 @@ class Exporter:
 				
 			if not already_exported or replace_existing:
 				cropped.save(outPathPng)
+			
+			if data.hasMask(id):
+				if not os.path.exists(self.outFolderMask):
+					os.makedirs(self.outFolderMask)
+				base_value = 0.3
+				mask = data.getMask(id).resize(cropped.size, Image.LANCZOS)
+				arr = np.asarray(mask).astype(np.float32)
+				rescaled_arr = np.clip(arr * (1.0 - base_value) + base_value * 255, 0, 255)
+				mask = Image.fromarray(rescaled_arr.astype(np.uint8))
+				
+				mask.save(self.outFolderMask + '/' + id + '.png')
+				
+				
 		

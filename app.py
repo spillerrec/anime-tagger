@@ -8,7 +8,7 @@ import sys
 import io
 from PIL import Image
 import requests
-import danbooru
+#import danbooru
 import data
 import tagger
 from export import Exporter
@@ -45,7 +45,7 @@ def hasTag(id, wanted_tag):
 wanted_tag = sys.argv[1]
 data.setSourceDir(wanted_tag)
 files = data.getFiles(wanted_tag)
-dan_files = danbooru.getFiles()
+dan_files = []#danbooru.getFiles()
 print(files)
 
 progress_bars = {}
@@ -122,6 +122,14 @@ def serve_set_tag():
 @app.route('/set_text')
 def serve_set_text():
 	return flask.send_from_directory(app.config['UPLOAD_FOLDER'], 'set_text.html')
+	
+@app.route('/set_pose')
+def serve_set_pose():
+	return flask.send_from_directory(app.config['UPLOAD_FOLDER'], 'set_pose.html')
+	
+@app.route('/set_mask')
+def serve_set_mask():
+	return flask.send_from_directory(app.config['UPLOAD_FOLDER'], 'set_mask.html')
 
 @app.route('/ids')
 def serve_ids():
@@ -142,6 +150,10 @@ def serve_missing_tag_ids():
 @app.route('/missingTextIds')
 def serve_missing_text_ids():
 	return jsonify(data.getMissingTextIds())
+	
+@app.route('/missingMaskIds')
+def serve_missing_mask_ids():
+	return jsonify(data.getMissingMaskIds())
 	
 	
 @app.route('/get-tag-histo/<in_tag>')
@@ -203,6 +215,28 @@ def set_text():
 	print(res)
 	
 	data.setText(res['id'], res['text'])
+	
+@app.route('/set-pose', methods=['POST'])
+def set_pose():
+	res = request.json
+	print(res)
+	
+	data.setPose(res['id'], res['pose'])
+	
+	return '[true]'
+	
+@app.route('/set-mask/<id>', methods=['POST'])
+def set_mask(id):
+	print(request.files)
+	file = request.files['image']
+	if file.filename == '':
+		return '[false]'
+		
+	try:
+		image = Image.open(file.stream)
+		data.setMask(id, image)
+	except Exception as e:
+		return '[false]'
 	
 	return '[true]'
 	
@@ -308,6 +342,14 @@ def data_taglist():
 @app.route('/data/autotags/<id>')
 def data_autotags(id):
 	return jsonify(data.getAutoTags(wanted_tag, id))
+
+@app.route('/data/pose/<id>')
+def data_pose(id):
+	return jsonify(data.getPose(wanted_tag, id))
+
+@app.route('/data/pose/missing')
+def serve_missing_pose_ids():
+	return jsonify(data.getMissingPoseIds())
 
 
 

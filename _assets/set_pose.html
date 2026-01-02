@@ -1,0 +1,450 @@
+<!doctype html>
+<html>
+  <head>
+	<meta charset="utf-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+	<title>Image Point Editor</title>
+  </head>
+  <body>
+	<div id="root"></div>
+	<script type="module">
+	import { getJson } from '/assets/api'
+		import { h, render, Fragment } from 'https://esm.sh/preact';
+		import htm from 'https://esm.sh/htm';
+	 import { useState, useRef, useEffect } from 'https://esm.sh/preact/hooks'
+	 const html = htm.bind(h);
+	 
+	 
+	let ids = await getJson("/data/pose/missing");
+	let index = 0
+
+function clamp(v, a = 0, b = 1) {
+	return Math.min(b, Math.max(a, v));
+}
+const zip = (a, b) => a.map((k, i) => [k, b[i]]);
+
+function useImageSize(ref) {
+	const [size, setSize] = useState({ w: 0, h: 0 });
+	useEffect(() => {
+		function update() {
+			if (ref.current) {
+				setSize({
+					w: ref.current.naturalWidth,
+					h: ref.current.naturalHeight
+				});
+			}
+		}
+		update();
+		window.addEventListener("resize", update);
+		return () => window.removeEventListener("resize", update);
+	}, [ref]);
+	return size;
+}
+
+function App() {
+
+	const [imageB64, setImageB64] = useState(null);
+	const [sets, setSets] = useState([]);
+	const [visibleSetId, setVisibleSetId] = useState(null);
+	
+	const [showLabels, setShowLabels] = useState(true);
+	const [showPoints, setShowPoints] = useState(true);
+	const [showLines, setShowLines] = useState(true);
+
+	const imgRef = useRef(null);
+	const svgRef = useRef(null);
+	const containerRef = useRef(null);
+
+	useImageSize(imgRef);
+
+	const defaultSet = {
+		id: Math.random().toString(36).slice(2, 9),
+		label: 'default set',
+		points: [
+			{ name: 'nose', x: 0.468, y: 0.214, p: 1.0 },
+			{ name: 'left_eye', x: 0.496, y: 0.197, p: 1.0 },
+			{ name: 'right_eye', x: 0.431, y: 0.201, p: 1.0 },
+			{ name: 'left_ear', x: 0.547, y: 0.205, p: 1.0 },
+			{ name: 'right_ear', x: 0.391, y: 0.212, p: 1.0 },
+			{ name: 'left_shoulder', x: 0.568, y: 0.285, p: 1.0 },
+			{ name: 'right_shoulder', x: 0.359, y: 0.283, p: 1.0 },
+			{ name: 'left_elbow', x: 0.570, y: 0.397, p: 1.0 },
+			{ name: 'right_elbow', x: 0.273, y: 0.359, p: 1.0 },
+			{ name: 'left_wrist', x: 0.597, y: 0.494, p: 1.0 },
+			{ name: 'right_wrist', x: 0.224, y: 0.476, p: 1.0 },
+			{ name: 'left_hip', x: 0.502, y: 0.485, p: 1.0 },
+			{ name: 'right_hip', x: 0.358, y: 0.488, p: 1.0 },
+			{ name: 'left_knee', x: 0.556, y: 0.665, p: 1.0 },
+			{ name: 'right_knee', x: 0.356, y: 0.666, p: 1.0 },
+			{ name: 'left_ankle', x: 0.623, y: 0.874, p: 1.0 },
+			{ name: 'right_ankle', x: 0.374, y: 0.878, p: 1.0 },
+		]
+	};
+
+	const connectedLines = [
+		{ a: 0, b: 1, color: 'green' },
+		{ a: 0, b: 2, color: 'green' },
+		{ a: 1, b: 2, color: 'green' },
+		{ a: 1, b: 3, color: 'green' },
+		{ a: 2, b: 4, color: 'green' },
+		{ a: 3, b: 5, color: 'green' },
+		{ a: 4, b: 6, color: 'green' },
+		{ a: 5, b: 6, color: 'blue' },
+		{ a: 5, b: 7, color: 'blue' },
+		{ a: 6, b: 8, color: 'blue' },
+		{ a: 7, b: 9, color: 'blue' },
+		{ a: 8, b: 10, color: 'blue' },
+		{ a: 5, b: 11, color: 'purple' },
+		{ a: 6, b: 12, color: 'purple' },
+		{ a: 11, b: 12, color: 'purple' },
+		{ a: 11, b: 13, color: 'orange' },
+		{ a: 12, b: 14, color: 'orange' },
+		{ a: 13, b: 15, color: 'orange' },
+		{ a: 14, b: 16, color: 'orange' },
+	];
+
+	useEffect(() => {
+		setSets([]);
+		loadFile();
+	}, []);
+
+	async function loadFile() {
+		// Fetch the image from the URL
+		const imageUrl = '/image/' + ids[index];
+		const response = await fetch(imageUrl);
+		if (!response.ok) {
+			console.error("Failed to fetch image from URL:", imageUrl);
+			return;
+		}
+
+		// Convert the image response to a blob
+		const blob = await response.blob();
+
+		// Create a temporary URL to read the blob as a data URL
+		const url = URL.createObjectURL(blob);
+
+		const reader = new FileReader();
+		reader.onload = async ev => {
+			const b64 = ev.target.result.split(',')[1];
+			setImageB64(b64);
+
+			const resp = await fetch('http://localhost:4556/infer', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ image_base64: b64 })
+			});
+
+			const data = await resp.json();
+			loadSet(data['metadata']['poses']);
+		};
+
+		reader.readAsDataURL(blob);
+	}
+
+	async function nextFile() {
+	
+		console.log(sets.map(s => s.points))
+		fetch("/set-pose", {
+			method: "POST",
+			headers: {
+				"Content-Type": "application/json"
+			},
+			body: JSON.stringify({
+				'id': ids[index],
+				'pose': sets.map(s => s.points)
+			})
+		})
+			.then(response => response.json())
+			.then(data => console.log(data))
+			.catch(error => console.error(error));
+	
+	
+		index++;
+		loadFile();
+	}
+
+	function loadSet(poses) {
+		setSets(
+			poses.map(pose => {
+				const id = Math.random().toString(36).slice(2, 9);
+				const label = `set-${id}`;
+
+				let points = zip(pose, defaultSet.points).map(([pt, def]) => ({
+					name: def.name,
+					x: pt[0] / imgRef.current.naturalWidth,
+					y: pt[1] / imgRef.current.naturalHeight,
+					p: pt[2]
+				}));
+
+				return { id, label, points };
+			})
+		);
+	}
+
+	function addSet() {
+		const id = Math.random().toString(36).slice(2, 9);
+		const newSet = {
+			id,
+			label: `set-${id}`,
+			points: defaultSet.points.map(pt => ({ ...pt }))
+		};
+
+		setSets(s => [...s, newSet]);
+	}
+
+	function removeSet(id) {
+		setSets(s => s.filter(x => x.id !== id));
+	}
+
+	function toggleShowOnly(id) {
+		setVisibleSetId(prev => (prev === id ? null : id));
+	}
+
+	function toPx(pt) {
+		const img = imgRef.current;
+		if (!img) return { left: 0, top: 0 };
+		return {
+			left: pt.x * img.clientWidth,
+			top: pt.y * img.clientHeight
+		};
+	}
+
+	function startDrag(e, setId, pointIndex) {
+		e.preventDefault();
+		const rect = imgRef.current.getBoundingClientRect();
+
+		function move(ev) {
+			const cX = ev.touches ? ev.touches[0].clientX : ev.clientX;
+			const cY = ev.touches ? ev.touches[0].clientY : ev.clientY;
+
+			let nx = (cX - rect.left) / rect.width;
+			let ny = (cY - rect.top) / rect.height;
+
+			nx = clamp(nx, -0.2, 1.2);
+			ny = clamp(ny, -0.2, 1.2);
+
+			setSets(prev =>
+				prev.map(s =>
+					s.id !== setId
+						? s
+						: {
+							  ...s,
+							  points: s.points.map((p, i) =>
+								  i === pointIndex ? { ...p, x: nx, y: ny } : p
+							  )
+						  }
+				)
+			);
+		}
+
+		function up() {
+			window.removeEventListener('mousemove', move);
+			window.removeEventListener('mouseup', up);
+		}
+
+		window.addEventListener('mousemove', move);
+		window.addEventListener('mouseup', up);
+	}
+
+	return html`
+		<div style=${{ display: 'flex', height: '100vh', fontFamily: 'Arial' }}>
+			<aside style=${{
+				width: 320,
+				borderRight: '1px solid #ddd',
+				padding: 12,
+				overflow: 'auto'
+			}}>
+				<h3>Sets</h3>
+
+				<div style=${{ marginBottom: 10 }}>
+					<button style=${{ marginLeft: 8 }} onclick=${nextFile}>Next image</button>
+					<button style=${{ marginLeft: 8 }} onclick=${addSet}>Add set</button>
+				</div>
+				
+
+				<div style=${{ marginBottom: 10 }}>
+					<input type="checkbox" id="show_points" name="show_points" checked=${showPoints} onChange=${e => setShowPoints(e.target.checked)} />
+					<label for="show_points">Show points</label>
+					<input type="checkbox" id="show_labels" name="show_labels" checked=${showLabels} onChange=${e => setShowLabels(e.target.checked)} />
+					<label for="show_labels">Show labels</label>
+					<input type="checkbox" id="show_lines" name="show_lines" checked=${showLines} onChange=${e => setShowLines(e.target.checked)}  />
+					<label for="show_lines">Show lines</label>
+				</div>
+
+				${sets.map(
+					s => html`
+						<div key=${s.id} style=${{
+							padding: 8,
+							border: '1px solid #eee',
+							marginBottom: 8
+						}}>
+							<div style=${{
+								display: 'flex',
+								justifyContent: 'space-between'
+							}}>
+								<strong>${s.label}</strong>
+								<div>
+									<button onclick=${() => toggleShowOnly(s.id)}
+										>${visibleSetId === s.id
+											? 'Show all'
+											: 'Show only'}</button
+									>
+									<button onclick=${() => removeSet(s.id)}
+										>Delete</button
+									>
+								</div>
+							</div>
+
+							<div style=${{ marginTop: 8 }}>
+								${s.points.map(
+									p => html`
+										<div
+											style=${{
+												display: 'flex',
+												justifyContent: 'space-between'
+											}}
+										>
+											<div>${p.name}</div>
+											<div>${p.p.toFixed(2)}</div>
+											<div>
+												${p.x.toFixed(3)}, ${p.y.toFixed(3)}
+											</div>
+										</div>
+									`
+								)}
+							</div>
+						</div>
+					`
+				)}
+			</aside>
+
+			<main
+				style=${{
+					flex: 1,
+					display: 'flex',
+					justifyContent: 'center',
+					alignItems: 'center',
+					padding: 20
+				}}
+			>
+				<div ref=${containerRef} style=${{ position: 'relative' }}>
+					${imageB64
+						? html`
+							  <img
+								  ref=${imgRef}
+								  src=${`data:image/*;base64,${imageB64}`}
+								  style=${{
+									  display: 'block',
+									  maxWidth: '80vw',
+									  maxHeight: '80vh'
+								  }}
+							  />
+						  `
+						: html`
+							  <div
+								  style=${{
+									  width: 640,
+									  height: 360,
+									  border: '1px dashed #ccc',
+									  display: 'flex',
+									  justifyContent: 'center',
+									  alignItems: 'center'
+								  }}
+							  >
+								  Upload an image
+							  </div>
+						  `}
+
+					<svg
+						ref=${svgRef}
+						style=${{
+							position: 'absolute',
+							top: 0,
+							left: 0,
+							visibility: showLines ? 'visible' : 'hidden'
+						}}
+						width=${imgRef.current ? imgRef.current.clientWidth : 0}
+						height=${imgRef.current ? imgRef.current.clientHeight : 0}
+					>
+						${sets.map(s =>
+							connectedLines.map(line => {
+								if (visibleSetId && visibleSetId !== s.id)
+									return null;
+								const A = toPx(s.points[line.a]);
+								const B = toPx(s.points[line.b]);
+								return html`
+									<line
+										x1=${A.left}
+										y1=${A.top}
+										x2=${B.left}
+										y2=${B.top}
+										stroke=${line.color}
+										stroke-width="2"
+									/>
+								`;
+							})
+						)}
+					</svg>
+
+					${imageB64 &&
+					sets.map(s =>
+						!showPoints || (visibleSetId && visibleSetId !== s.id)
+							? null
+							: html`
+								  <${Fragment} key=${s.id}>
+									  ${s.points.map((p, idx) => {
+										  const pos = toPx(p);
+										  return html`
+											  <div
+												  key=${p.name + idx}
+												  onmousedown=${e =>
+													  startDrag(e, s.id, idx)
+												  }
+												  style=${{
+													  position: 'absolute',
+													  left: pos.left,
+													  top: pos.top,
+													  transform: 'translate(-6px, -6px)'
+												  }}
+											  >
+												  <div
+													  style=${{
+														  width: 8,
+														  height: 8,
+														  borderRadius: 6,
+														  background: '#ff4444',
+														  border: '2px solid white',
+														  boxShadow:
+															  '0px 0px 4px rgba(0,0,0,0.3)'
+													  }}
+												  ></div>
+												  ${showLabels && html`<div
+													  style=${{
+														  fontSize: 11,
+														  background:
+															  'rgba(255,255,255,0.9)',
+														  padding: '2px 6px',
+														  borderRadius: 4,
+														  marginTop: 4
+													  }}
+												  >
+													  ${p.name}
+												  </div>`}
+											  </div>
+										  `;
+									  })}
+								  <//>
+							  `
+					)}
+				</div>
+			</main>
+		</div>
+	`;
+}
+
+render(html`<${App} />`, document.getElementById('root'));
+
+	 
+	 </script>
+  </body>
+</html>

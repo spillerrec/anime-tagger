@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Image Mask Drawing App</title>
+  <style>
+    body { text-align: center; font-family: sans-serif; margin: 20px; }
+    canvas { border: 1px solid #ccc; display: block; margin: 10px auto; }
+    #container { position: relative; display: inline-block; }
+    #drawCanvas { position: absolute; left: 0; top: 0; opacity:0.7; }
+    #controls { margin: 10px; }
+    button { margin: 5px; }
+  </style>
+</head>
+<body>
+  <h1>Image Mask Drawing App</h1>
+  <div id="controls">
+    <input type="file" id="imageLoader" accept="image/*" />
+    <br><br>
+    <label>Brush Size: <span id="brushSizeDisplay">10</span> px</label>
+    <input type="range" id="brushSize" min="1" max="100" value="10" />
+    <br><br>
+    <button onclick="toggleEraser()" id="eraserBtn">Switch to Eraser</button>
+    <button onclick="clearMask()">Clear Mask</button>
+    <button id="saveBtn">Export Mask as PNG</button>
+  </div>
+
+  <div id="container">
+    <canvas id="imageCanvas"></canvas>
+    <canvas id="drawCanvas"></canvas>
+  </div>
+
+  <script type="module">
+	import { getJson } from '/assets/api'
+
+	let index = 0
+	let ids = await getJson("/missingMaskIds");
+
+    const MAX_DIM = 1024;
+    const imageCanvas = document.getElementById('imageCanvas');
+    const drawCanvas = document.getElementById('drawCanvas');
+    const imageCtx = imageCanvas.getContext('2d');
+    const drawCtx = drawCanvas.getContext('2d');
+    const brushSizeInput = document.getElementById('brushSize');
+    const brushSizeDisplay = document.getElementById('brushSizeDisplay');
+    const eraserBtn = document.getElementById('eraserBtn');
+
+    let drawing = false;
+    let brushSize = parseInt(brushSizeInput.value, 10);
+    let eraserMode = false;
+
+    brushSizeInput.addEventListener('input', () => {
+      brushSize = parseInt(brushSizeInput.value, 10);
+      brushSizeDisplay.textContent = brushSize;
+    });
+
+    drawCanvas.addEventListener('mousedown', () => drawing = true);
+    drawCanvas.addEventListener('mouseup', () => drawing = false);
+    drawCanvas.addEventListener('mouseleave', () => drawing = false);
+    drawCanvas.addEventListener('mousemove', draw);
+
+    function draw(e) {
+      if (!drawing) return;
+      const rect = drawCanvas.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+
+      drawCtx.globalCompositeOperation = eraserMode ? 'destination-out' : 'source-over';
+      drawCtx.fillStyle = eraserMode ? 'rgba(0,0,0,1)' : 'red';
+
+      drawCtx.beginPath();
+      drawCtx.arc(x, y, brushSize / 2, 0, Math.PI * 2);
+      drawCtx.fill();
+    }
+
+    function toggleEraser() {
+      eraserMode = !eraserMode;
+      eraserBtn.textContent = eraserMode ? 'Switch to Brush' : 'Switch to Eraser';
+    }
+
+    function handleImage() {
+		const img = new Image();
+      img.onload = function() {
+        const { width, height } = scaleToFit(img, MAX_DIM);
+        imageCanvas.width = drawCanvas.width = width;
+        imageCanvas.height = drawCanvas.height = height;
+
+        imageCtx.clearRect(0, 0, width, height);
+        imageCtx.drawImage(img, 0, 0, width, height);
+        drawCtx.clearRect(0, 0, width, height);
+      }
+      img.onerror = function() {
+        alert("Failed to load image. Make sure the URL is correct and allows cross-origin access.");
+      };
+      img.src = '/image/' + ids[index];
+    }
+
+    function scaleToFit(img, maxDim) {
+      let { width, height } = img;
+      if (width > height) {
+        if (width > maxDim) {
+          height *= maxDim / width;
+          width = maxDim;
+        }
+      } else {
+        if (height > maxDim) {
+          width *= maxDim / height;
+          height = maxDim;
+        }
+      }
+      return { width: Math.round(width), height: Math.round(height) };
+    }
+
+    function clearMask() {
+      drawCtx.clearRect(0, 0, drawCanvas.width, drawCanvas.height);
+    }
+
+	 
+function uploadImage() {
+
+      const maskCanvas = document.createElement('canvas');
+      const maskCtx = maskCanvas.getContext('2d');
+      maskCanvas.width = drawCanvas.width;
+      maskCanvas.height = drawCanvas.height;
+
+      maskCtx.drawImage(drawCanvas, 0, 0);
+
+      const imageData = maskCtx.getImageData(0, 0, maskCanvas.width, maskCanvas.height);
+      const data = imageData.data;
+      for (let i = 0; i < data.length; i += 4) {
+        const alpha = data[i + 3] / 255;
+        const grayscale = Math.round(alpha * 255);
+        data[i] = data[i + 1] = data[i + 2] = grayscale;
+        data[i + 3] = 255;
+      }
+      maskCtx.putImageData(imageData, 0, 0);
+		
+	const final_id = ids[index]
+  maskCanvas.toBlob(function(blob) {
+    const formData = new FormData();
+    formData.append('image', blob, 'image.png');
+
+    fetch('/set-mask/' + final_id, {
+      method: 'POST',
+      body: formData,
+      headers: {
+        // You can add authorization or other headers here
+        // 'Authorization': 'Bearer YOUR_TOKEN'
+      }
+    })
+    .then(response => {
+      if (!response.ok) throw new Error("Upload failed");
+      return response.json();
+    })
+    .then(data => {
+      console.log("Upload success:", data);
+    })
+    .catch(err => {
+      console.error("Upload error:", err);
+      alert("Failed to upload image.");
+    });
+  }, 'image/png');
+  
+  index = index + 1;
+	handleImage();
+}
+
+    document.getElementById('saveBtn').onclick = uploadImage;
+	 
+	handleImage();
+  </script>
+</body>
+</html>

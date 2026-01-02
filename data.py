@@ -349,3 +349,59 @@ def getMissingTextIds():
 	
 	return ids
 	
+	
+def getPoses():
+	path = getJsonPath('poses.json')
+	if os.path.exists(path):
+		return readJson(path)
+	return {}
+	
+def savePoses(texts):
+	path = getJsonPath('poses.json')
+	with open(path, "w") as f:
+		json.dump(texts, f, indent=2)
+	
+def setPose(id, pose):
+	poses = getPoses()
+	poses[id] = pose
+	savePoses(poses)
+	
+def getPose(id):
+	id = str(id)
+	poses = getPoses()
+	if not id in poses:
+		return []
+	return poses[id]
+	
+def getMissingPoseIds():
+	allIds = getCropIds(currentSourceDir)
+	poses = getPoses()
+	
+	ids = list(filter(lambda x: not x in poses, allIds))
+	
+	return ids
+	
+	
+def getMaskPath(cropId):
+	return 'masks/' + currentSourceDir + '/' + cropId + '.png'
+	
+def hasMask(cropId):
+	return os.path.exists(getMaskPath(cropId))
+	
+def setMask(id, image):
+	path = getMaskPath(id)
+	os.makedirs(os.path.dirname(path), exist_ok=True)
+	image.save(path)
+	
+def getMask(id):
+	if not hasMask(id):
+		return None
+	
+	return Image.open(getMaskPath(id))
+	
+def getMissingMaskIds():
+	allIds = getCropIds(currentSourceDir)
+	
+	ids = list(filter(lambda x: not hasMask(x), allIds))
+	
+	return ids
